@@ -30,6 +30,11 @@ def get_colors():
         "C": Fore.CYAN,
         "RESET": Style.RESET_ALL
     }
+###################################################
+# Usage about get_colors()
+# color = get_colors()
+# logging.info(f"color["R"]---------------------Initialization module--------------------")
+# print(color["R"] + "---------------Initialization moudel-------------------------" + color["RESET"])
 
 def knn(x, k):
     """
