@@ -33,7 +33,7 @@ solver_session = pyFluent.launch_fluent(
     mode="solver",
 )
 
-solver_session.get_fluent_version()
+print(solver_session.get_fluent_version())
 
 ###############################################################################
 # Import mesh and perform mesh check
@@ -43,8 +43,18 @@ solver_session.get_fluent_version()
 
 mesh_file=r"E:\Ansys_simulation\3Dprinted\FDM-PCF.msh"
 save_path=os.getcwd()
-solver_session.file.read_case(file_name=mesh_file)
-solver_session.mesh.check()
+solver_session.settings.file.read_case(file_name=mesh_file)
+solver_session.settings.mesh.check()
+
+###############################################################################
+# Setup model for CFD analysis
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Select "sst k-omega" model
+#
+
+solver_model = solver_session.settings.setup.models.viscous
+solver_model.model = "k-omega"
+solver_model.k_omega_model = "sst"
 
 ###############################################################################
 # Create material
@@ -52,7 +62,7 @@ solver_session.mesh.check()
 # Create a material named "Air"
 #
 
-solver_session.setup.materials.database.copy_by_name(type="fluid", name="air")
+solver_session.settings.setup.materials.database.copy_by_name(type="fluid", name="air")
 
 ###############################################################################
 # Set up cell zone conditions
@@ -66,15 +76,61 @@ solver_session.setup.materials.database.copy_by_name(type="fluid", name="air")
 
 
 ###############################################################################
-# Set up boundary conditions for the "inlet", "outlet", "wall"
-# for CFD analysis
+# Set up boundary conditions for CFD analysis
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# for the "inlet", "outlet", "wall"
+#
 #
 
-inlet = solver_session.setup.boundary_conditions.velocity_inlet["inlet"]
+# inlet, Setting: Value
+# Velocity Specification Method: Magnitude, Normal to Boundary
+# Velocity Magnitude: 1.5[m/s]
+# Turbulent module:
+#    Specification Method: Intensity and Viscosity Ratio
+#    Turbluent Intensity: 5 [%]
+#    Turbulent Viscosity Rati [10]
+inlet = solver_session.settings.setup.boundary_conditions.velocity_inlet["inlet"]
 inlet.momentum.velocity_magnitude.value = 0.4
+inlet.turbulence.turbulent_intensity = 0.05
+inlet.turbulence.turbulent_viscosity_ratio = 10
 
 
+# outlet, Setting: Value
+# Turbulent module:
+#    Specification Method: Intensity and Viscosity Ratio
+#    Backflow Turbluent Intensity: 5 [%]
+#    Backflow Turbulent Viscosity Ratio: [10]
 
+outlet = solver_session.settings.setup.boundary_conditions.pressure_outlet["outlet"]
+outlet.turbulence.turbulent_intensity = 0.05
+outlet.turbulence.turbulent_viscosity_ratio = 10
+
+###############################################################################
+# Set Method for CFD analysis
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# BUG Maybe do not need set methods Explicitly in code
+# The system will take one automatically
+#
+
+#solver_methods = solver_session.settings.solution.methods()
+#solver_methods.flow_scheme = "SIMPLE"
+
+###############################################################################
+# Initialize flow field
+# ~~~~~~~~~~~~~~~~~~~~~
+# Initialize the flow field using hybrid initialization.
+#
+
+print(color["R"] + "---------------Initialization moudel-------------------------" + color["RESET"])
+solver_session.settings.solution.initialization.hybrid_initialize()
+
+###############################################################################
+# Close Fluent
+# ~~~~~~~~~~~~
+# Close Fluent.
+#
+
+solver_session.exit()
 
 
 
