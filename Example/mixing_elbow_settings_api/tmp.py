@@ -62,16 +62,23 @@ solver_model.k_omega_model = "sst"
 # Create a material named "Air"
 #
 
-solver_session.settings.setup.materials.database.copy_by_name(type="fluid", name="air")
+print(color["R"] + "--------------- Matrials -------------------------" + color["RESET"])
+solver_materials = solver_session.settings.setup.materials
+solver_materials.database.copy_by_name(type="fluid", name="air")
+air_dict = solver_materials.fluid["air"].get_state()
+air_dict["density"]["value"] = 1.225
+air_dict["viscosity"]["value"] = 1.7894e-05
+solver_materials.fluid["air"].set_state(air_dict)
 
 ###############################################################################
 # Set up cell zone conditions
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Set up the cell zone conditions for the fluid zone
+# i.e. Define the fluid zone material property
 # Set "material" to "air"
 #
 
-# BUG I have not set fluid zone yet!
+# Take the default
 #solver_session.setup.cell_zone_conditions.fluid[""].general.matiral = ("air")
 
 
@@ -106,8 +113,8 @@ outlet.turbulence.turbulent_intensity = 0.05
 outlet.turbulence.turbulent_viscosity_ratio = 10
 
 ###############################################################################
-# Set Method for CFD analysis
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Solution module: Set Method for CFD analysis
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # BUG Maybe do not need set methods Explicitly in code
 # The system will take one automatically
 #
@@ -116,13 +123,35 @@ outlet.turbulence.turbulent_viscosity_ratio = 10
 #solver_methods.flow_scheme = "SIMPLE"
 
 ###############################################################################
-# Initialize flow field
-# ~~~~~~~~~~~~~~~~~~~~~
+# Solution module: Initialize flow field
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Initialize the flow field using hybrid initialization.
 #
 
 print(color["R"] + "---------------Initialization moudel-------------------------" + color["RESET"])
 solver_session.settings.solution.initialization.hybrid_initialize()
+
+###############################################################################
+# Solution module: Set run Caculation
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# SOlve for 150 iterations
+
+solver_solution = solver_session.settings.solution
+solver_solution.run_calculation.iterate(iter_count=100)
+
+###############################################################################
+# Result module: Configure graphics picture export
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+
+solver_results = solver_session.settings.results
+graphics = solver_results.graphics
+
+# Define graph resolution by hand
+if graphics.picture.use_window_resolution.is_active():
+    graphics.picture.use_window_resolution = False
+graphics.picture.x_resolution = 1920
+graphics.picture.y_resolution = 1440
 
 ###############################################################################
 # Close Fluent
