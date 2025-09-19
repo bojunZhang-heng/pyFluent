@@ -172,6 +172,7 @@ inlet_surf = solver_results.surfaces.zone_surface["inlet_surf"]
 inlet_surf.zone_name = "inlet"
 
 # Create a contour of velocity magnitude, show and save
+# BUG is here! Segmentation falut
 #contour_inlet = Contour(solver=solver_session, field="velocity-magnitude", surfaces=["inlet_surf"])
 #disp1 = GraphicsWindow()
 #disp1.add_graphics(contour_inlet)
