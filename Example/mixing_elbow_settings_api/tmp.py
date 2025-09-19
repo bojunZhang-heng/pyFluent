@@ -5,6 +5,7 @@
 import os
 import logging
 import ansys.fluent.core as pyFluent
+from ansys.fluent.visualization import Contour, GraphicsWindow
 from utils import setup_logger, get_colors
 from colorama import Fore, Style
 from datetime import datetime
@@ -152,6 +153,34 @@ if graphics.picture.use_window_resolution.is_active():
     graphics.picture.use_window_resolution = False
 graphics.picture.x_resolution = 1920
 graphics.picture.y_resolution = 1440
+
+#######################################################################################
+# Save the case file
+# ~~~~~~~~~~~~~~~~~~
+#
+
+solver_session.settings.file.write(file_type="case-data", file_name="FDM-PCF.cas.h5")
+
+###############################################################################
+# Post-Processing Workflow
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+#
+
+# Create, get and set, so Fluent knows which faces to use
+solver_results.surfaces.zone_surface.create(name="inlet_surf")
+inlet_surf = solver_results.surfaces.zone_surface["inlet_surf"]
+inlet_surf.zone_name = "inlet"
+
+# Create a contour of velocity magnitude, show and save
+#contour_inlet = Contour(solver=solver_session, field="velocity-magnitude", surfaces=["inlet_surf"])
+#disp1 = GraphicsWindow()
+#disp1.add_graphics(contour_inlet)
+#disp1.show()
+
+graphics = solver_results.graphics
+graphics.picture.save_picture(file_name="inlet_surf_velocity_magnitude.png")
+
+
 
 ###############################################################################
 # Close Fluent
