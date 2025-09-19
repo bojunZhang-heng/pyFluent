@@ -164,23 +164,34 @@ solver_session.settings.file.write(file_type="case-data", file_name="FDM-PCF.cas
 ###############################################################################
 # Post-Processing Workflow
 # ~~~~~~~~~~~~~~~~~~~~~~~~
+# Graphics module
+# Create a contour of velocity magnitude, show and save
 #
 
-# Create, get and set, so Fluent knows which faces to use
-solver_results.surfaces.zone_surface.create(name="inlet_surf")
-inlet_surf = solver_results.surfaces.zone_surface["inlet_surf"]
-inlet_surf.zone_name = "inlet"
-
-# Create a contour of velocity magnitude, show and save
-# BUG is here! Segmentation falut
-#contour_inlet = Contour(solver=solver_session, field="velocity-magnitude", surfaces=["inlet_surf"])
-#disp1 = GraphicsWindow()
-#disp1.add_graphics(contour_inlet)
-#disp1.show()
-
+# filed: denotes the variable type, such as velocity
+# surfaces_list: select the surface which is need to display
+# node_values: True is smoother; False is cell denote, blocker
+# display(): Necessary,display the picture in the graph
+# range_options: both of them false means take the colorbar according to
+#   the local min and max value
 graphics = solver_results.graphics
-graphics.picture.save_picture(file_name="inlet_surf_velocity_magnitude.png")
+graphics.contour["velocity_outlet"] = {
+        "field": "velocity-magnitude",
+        "surfaces_list": ["outlet"],
+        "node_values": False,
+        }
+velocity_outlet = solver_results.graphics.contour["velocity_outlet"]
+velocity_outlet.print_state()
+velocity_outlet.range_options = {
+                    "global_range": False,
+                    "auto_range": False
+                }
+velocity_outlet.options.scale = 4
+velocity_outlet.display()
 
+graphics.views.restore_view(view_name="front")
+graphics.views.auto_scale()
+graphics.picture.save_picture(file_name="outlet_surf_velocity_magnitude.png")
 
 
 ###############################################################################
