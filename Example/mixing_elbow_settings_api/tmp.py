@@ -48,6 +48,18 @@ solver_session.settings.file.read_case(file_name=mesh_file)
 solver_session.settings.mesh.check()
 
 ###############################################################################
+# General Moudle
+# ~~~~~~~~~~~~~~
+# Set transient time
+#
+
+solver_general = solver_session.settings.setup.general
+solver_general.solver.time = "unsteady-2nd-order"
+solver_general.solver.time.print_state()
+solver_general.solver.time.allowed_values()
+
+
+###############################################################################
 # Setup model for CFD analysis
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Select "sst k-omega" model
@@ -98,7 +110,8 @@ solver_materials.fluid["air"].set_state(air_dict)
 #    Turbluent Intensity: 5 [%]
 #    Turbulent Viscosity Rati [10]
 inlet = solver_session.settings.setup.boundary_conditions.velocity_inlet["inlet"]
-inlet.momentum.velocity_magnitude.value = 0.4
+inlet.momentum.velocity_magnitude.value = 1.5
+inlet.turbulence.turbulence_specification = "Intensity and Viscosity Ratio"
 inlet.turbulence.turbulent_intensity = 0.05
 inlet.turbulence.turbulent_viscosity_ratio = 10
 
@@ -110,6 +123,7 @@ inlet.turbulence.turbulent_viscosity_ratio = 10
 #    Backflow Turbulent Viscosity Ratio: [10]
 
 outlet = solver_session.settings.setup.boundary_conditions.pressure_outlet["outlet"]
+outlet.turbulence.turbulence_specification = "Intensity and Viscosity Ratio"
 outlet.turbulence.turbulent_intensity = 0.05
 outlet.turbulence.turbulent_viscosity_ratio = 10
 
@@ -181,12 +195,10 @@ graphics.contour["velocity_outlet"] = {
         "node_values": False,
         }
 velocity_outlet = solver_results.graphics.contour["velocity_outlet"]
-velocity_outlet.print_state()
 velocity_outlet.range_options = {
-                    "global_range": False,
-                    "auto_range": False
+                    "auto_range": True
                 }
-velocity_outlet.options.scale = 4
+velocity_outlet.print_state()
 velocity_outlet.display()
 
 graphics.views.restore_view(view_name="front")
