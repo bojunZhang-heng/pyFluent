@@ -1,3 +1,17 @@
 *.trn
-
+../ahmed_body_workflow.py
+../brake.py 
+../conjugate_heat_transfer.py
+../exhaust_system_settings_api.py 
+../external_compressible_flow.py 
+../frozen_rotor_workflow.py 
+../mixing_elbow_settings_api 
+../mixing_tank_workflow.py 
+../modeling_ablation.py 
+../modeling_cavitation.py 
+../parametric_static_mixer_1.py 
+../radiation_headlamp.py 
+../single_battery_cell_workflow.py 
+../species_transport.py 
+../tyler_sofrin_modes.py
 
