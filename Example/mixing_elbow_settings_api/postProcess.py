@@ -5,7 +5,13 @@
 
 import os
 import ansys.fluent.core as pyFluent
+from ansys.fluent.core import SurfaceDataType, SurfaceFieldDataRequest
 from ansys.fluent.visualization import Contour, GraphicsWindow
+from ansys.fluent.core.solver import VelocityInlet
+from utils import setup_logger, get_colors
+from colorama import Fore, Style
+
+color = get_colors()
 
 ###############################################################################
 # Launch Fluent
@@ -36,11 +42,35 @@ solver_file.read_case(file_name=cas_File)
 solver_file.read_data(file_name=dat_File)
 
 ###############################################################################
+# Field_data Module
+# ~~~~~~~~~~~~~~~~~
+# Take a flat, perpendicular outlet plane
+#
+
+#outlet_surf = solver_session.settings.setup.boundary_conditions.pressure_outlet["outlet"].surface
+field_data = solver_session.fields.field_data
+
+normal_request = SurfaceFieldDataRequest(
+        surfaces=["outlet"],
+        data_types=[SurfaceDataType.FacesNormal],
+        )
+normal_data = field_data.get_field_data(normal_request)
+
+print(color["R"] + "--------------- Surface Data  -------------------------" + color["RESET"])
+print(normal_data["outlet"].face_normals.shape)
+print(normal_data["outlet"].face_normals[5])
+
+
+###############################################################################
 # Post-Processing Workflow
 # ~~~~~~~~~~~~~~~~~~~~~~~~
 # Graphics module
 # Create a contour of velocity magnitude, show and save
 #
+
+solver_results = solver_session.settings.results
+
+
 
 # filed: denotes the variable type, such as velocity
 # surfaces_list: select the surface which is need to display
@@ -52,21 +82,20 @@ graphics = solver_results.graphics
 graphics.contour["velocity_outlet"] = {
         "field": "velocity-magnitude",
         "surfaces_list": ["outlet"],
-        "node_values": False,
+        "node_values": True,
         }
 velocity_outlet = solver_results.graphics.contour["velocity_outlet"]
-velocity_outlet.print_state()
 velocity_outlet.range_options = {
-                    "global_range": False,
-                    "auto_range": False
+                    "auto_range": True
                 }
-
-#velocity_outlet.options.scale = 4
+velocity_outlet.print_state()
 velocity_outlet.display()
 
 graphics.views.restore_view(view_name="front")
 graphics.views.auto_scale()
 graphics.picture.save_picture(file_name="outlet_surf_velocity_magnitude.png")
+
+
 
 ###############################################################################
 # Close Fluent
