@@ -212,7 +212,7 @@ graphics.picture.save_picture(file_name="outlet_surf_velocity_magnitude.png")
 # Close Fluent.
 #
 
-solver_session.exit()
+#solver_session.exit()
 
 
 
