@@ -4,6 +4,7 @@
 #
 
 import os
+import numpy as np
 import ansys.fluent.core as pyFluent
 from ansys.fluent.core import SurfaceDataType, SurfaceFieldDataRequest
 from ansys.fluent.visualization import Contour, GraphicsWindow
@@ -47,18 +48,28 @@ solver_file.read_data(file_name=dat_File)
 # Take a flat, perpendicular outlet plane
 #
 
-#outlet_surf = solver_session.settings.setup.boundary_conditions.pressure_outlet["outlet"].surface
+# Create an istance of the FieldData class
+# the normal_data is a area vector
 field_data = solver_session.fields.field_data
 
-normal_request = SurfaceFieldDataRequest(
+face_data_request = SurfaceFieldDataRequest(
         surfaces=["outlet"],
-        data_types=[SurfaceDataType.FacesNormal],
+        data_types=[SurfaceDataType.FacesNormal, SurfaceDataType.FacesCentroid],
         )
-normal_data = field_data.get_field_data(normal_request)
+all_data = field_data.get_field_data(face_data_request)
+
+normal_data = all_data
+
+normal_mean = normal_data["outlet"].face_normals.mean(axis=0)
+normal_unit = normal_mean / np.linalg.norm(mean_normal)
 
 print(color["R"] + "--------------- Surface Data  -------------------------" + color["RESET"])
 print(normal_data["outlet"].face_normals.shape)
-print(normal_data["outlet"].face_normals[5])
+
+# Get centroid data
+centroid_data = all_data
+print(centroid_data["outlet"].face_centriods.shape)
+print(centroid_data["outlet"].face_centriods[5])
 
 
 ###############################################################################
