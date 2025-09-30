@@ -7,7 +7,7 @@ import os
 import numpy as np
 import ansys.fluent.core as pyFluent
 from ansys.fluent.core import SurfaceDataType, SurfaceFieldDataRequest
-from ansys.fluent.visualization import Contour, GraphicsWindow
+from ansys.fluent.visualization import Contour, GraphicsWindow, PlaneSurface
 from ansys.fluent.core.solver import VelocityInlet
 from utils import setup_logger, get_colors
 from colorama import Fore, Style
@@ -54,22 +54,30 @@ field_data = solver_session.fields.field_data
 
 face_data_request = SurfaceFieldDataRequest(
         surfaces=["outlet"],
-        data_types=[SurfaceDataType.FacesNormal, SurfaceDataType.FacesCentroid],
+        data_types=[SurfaceDataType.FacesNormal,
+                    SurfaceDataType.FacesCentroid,
+                    SurfaceDataType.Velocity],
         )
-all_data = field_data.get_field_data(face_data_request)
+all_data = field_data.get_field_data(face_data_request)["outlet"]
 
 normal_data = all_data
-
-normal_mean = normal_data["outlet"].face_normals.mean(axis=0)
-normal_unit = normal_mean / np.linalg.norm(mean_normal)
-
+normal_mean = normal_data.face_normals.mean(axis=0)
+normal_unit = normal_mean / np.linalg.norm(normal_mean)
 print(color["R"] + "--------------- Surface Data  -------------------------" + color["RESET"])
 print(normal_data["outlet"].face_normals.shape)
 
 # Get centroid data
 centroid_data = all_data
-print(centroid_data["outlet"].face_centriods.shape)
-print(centroid_data["outlet"].face_centriods[5])
+centroid_mean = centroid_data["outlet"].face_normals.mean(axis=0)
+print(centroid_data["outlet"].face_centroids.shape)
+print(centroid_mean)
+
+# Create plane surface using normal point and centroid point
+outlet_plane = PlaneSurface.create_from_point_and_normal(
+        solver = solver_session,
+        point=centroid_mean,
+        normal=normal_unit
+        )
 
 
 ###############################################################################
@@ -79,16 +87,6 @@ print(centroid_data["outlet"].face_centriods[5])
 # Create a contour of velocity magnitude, show and save
 #
 
-solver_results = solver_session.settings.results
-
-
-
-# filed: denotes the variable type, such as velocity
-# surfaces_list: select the surface which is need to display
-# node_values: True is smoother; False is cell denote, blocker
-# display(): Necessary,display the picture in the graph
-# range_options: both of them false means take the colorbar according to
-#   the local min and max value
 graphics = solver_results.graphics
 graphics.contour["velocity_outlet"] = {
         "field": "velocity-magnitude",
@@ -114,7 +112,7 @@ graphics.picture.save_picture(file_name="outlet_surf_velocity_magnitude.png")
 # Close Fluent.
 #
 
-solver_session.exit()
+#solver_session.exit()
 
 
 
