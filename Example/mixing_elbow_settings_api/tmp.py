@@ -188,22 +188,22 @@ solver_session.settings.file.write(file_type="case-data", file_name="FDM-PCF.cas
 # display(): Necessary,display the picture in the graph
 # range_options: both of them false means take the colorbar according to
 #   the local min and max value
-graphics = solver_results.graphics
-graphics.contour["velocity_outlet"] = {
-        "field": "velocity-magnitude",
-        "surfaces_list": ["outlet"],
-        "node_values": False,
-        }
-velocity_outlet = solver_results.graphics.contour["velocity_outlet"]
-velocity_outlet.range_options = {
-                    "auto_range": True
-                }
-velocity_outlet.print_state()
-velocity_outlet.display()
-
-graphics.views.restore_view(view_name="front")
-graphics.views.auto_scale()
-graphics.picture.save_picture(file_name="outlet_surf_velocity_magnitude.png")
+#graphics = solver_results.graphics
+#graphics.contour["velocity_outlet"] = {
+#        "field": "velocity-magnitude",
+#        "surfaces_list": ["outlet"],
+#        "node_values": False,
+#        }
+#velocity_outlet = solver_results.graphics.contour["velocity_outlet"]
+#velocity_outlet.range_options = {
+#                    "auto_range": True
+#                }
+#velocity_outlet.print_state()
+#velocity_outlet.display()
+#
+#graphics.views.restore_view(view_name="front")
+#graphics.views.auto_scale()
+#graphics.picture.save_picture(file_name="outlet_surf_velocity_magnitude.png")
 
 
 ###############################################################################
@@ -212,7 +212,7 @@ graphics.picture.save_picture(file_name="outlet_surf_velocity_magnitude.png")
 # Close Fluent.
 #
 
-#solver_session.exit()
+solver_session.exit()
 
 
 
