@@ -5,14 +5,14 @@
 
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 import ansys.fluent.core as pyFluent
 from ansys.fluent.core import SurfaceDataType, SurfaceFieldDataRequest
 from ansys.fluent.visualization import Contour, GraphicsWindow, PlaneSurface
 from ansys.fluent.core.solver import VelocityInlet
-from utils import setup_logger, get_colors
 from colorama import Fore, Style
+from utils import project_to_plane
 
-color = get_colors()
 
 ###############################################################################
 # Launch Fluent
@@ -56,21 +56,19 @@ face_data_request = SurfaceFieldDataRequest(
         surfaces=["outlet"],
         data_types=[SurfaceDataType.FacesNormal,
                     SurfaceDataType.FacesCentroid,
-                    SurfaceDataType.Velocity],
+                   ]
         )
 all_data = field_data.get_field_data(face_data_request)["outlet"]
 
-normal_data = all_data
-normal_mean = normal_data.face_normals.mean(axis=0)
+normal_data = all_data.face_normals
+normal_mean = normal_data.mean(axis=0)
 normal_unit = normal_mean / np.linalg.norm(normal_mean)
-print(color["R"] + "--------------- Surface Data  -------------------------" + color["RESET"])
-print(normal_data["outlet"].face_normals.shape)
+print(normal_data.shape)
 
 # Get centroid data
-centroid_data = all_data
-centroid_mean = centroid_data["outlet"].face_normals.mean(axis=0)
-print(centroid_data["outlet"].face_centroids.shape)
-print(centroid_mean)
+centroid_data = all_data.face_centroids
+centroid_mean = centroid_data.mean(axis=0)
+print(centroid_data.shape)
 
 # Create plane surface using normal point and centroid point
 outlet_plane = PlaneSurface.create_from_point_and_normal(
@@ -79,6 +77,52 @@ outlet_plane = PlaneSurface.create_from_point_and_normal(
         normal=normal_unit
         )
 
+###############################################################################
+# Get Solution Info
+# ~~~~~~~~~~~~~~~~~
+#
+
+# Get Solution Variable Info
+solution_variable_info = solver_session.fields.solution_variable_info
+zones_info = solution_variable_info.get_zones_info() 
+print("Domains:", zones_info.domains)      # e.g. ['mixture'] 
+print("Zones:", zones_info.zones)          # e.g. ['inlet','wall','outlet',...] 
+domain_name = "mixture"                    # change to domains in your case
+zone_names = ["outlet"]                     # change to zones in your case 
+
+vars_info = solution_variable_info.get_variables_info(zone_names=zone_names, domain_name=domain_name)
+print("Available SVAR names:", vars_info.solution_variables)  # e.g. ['SV_U', 'SV_V', 'SV_P', 'SV_W']
+svu_info = vars_info['SV_U'] 
+svv_info = vars_info['SV_V'] 
+svw_info = vars_info['SV_W'] 
+svcentroid_info = vars_info['SV_CENTROID'] 
+print(svu_info.name, svu_info.dimension, svu_info.field_type) # SV_U 1 <class 'numpy.float64'> 
+
+# Get Solution Variable Data 
+# The centroid data in SV is the same as field data
+solution_variable_data = solver_session.fields.solution_variable_data  
+sv_u = solution_variable_data.get_data(variable_name="SV_U", zone_names=zone_names, domain_name=domain_name)['outlet'] 
+sv_v = solution_variable_data.get_data(variable_name="SV_V", zone_names=zone_names, domain_name=domain_name)['outlet']
+sv_w = solution_variable_data.get_data(variable_name="SV_W", zone_names=zone_names, domain_name=domain_name)['outlet']
+outlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name)['outlet']
+outlet_position = np.reshape(outlet_position, (-1, 3))
+
+outlet_vel = np.stack((sv_u, sv_v, sv_w), axis=1)
+#outletvel_mag = np.sqrt(u**2 + v**2 + w**2)
+print(outlet_vel.shape)
+print(outlet_vel[1][:])
+
+print(outlet_position.shape)
+print(outlet_position[1][:])
+
+###############################################################################
+# Post-Processing Workflow
+# ~~~~~~~~~~~~~~~~~~~~~~~~
+# Draw a outlet velocity profile by plt
+#
+
+coords2d, axis1, axis2, origin = project_to_plane(outlet_position, normal_unit, centroid_mean)
+    
 
 ###############################################################################
 # Post-Processing Workflow
