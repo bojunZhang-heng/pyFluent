@@ -11,7 +11,7 @@ from ansys.fluent.core import SurfaceDataType, SurfaceFieldDataRequest
 from ansys.fluent.visualization import Contour, GraphicsWindow, PlaneSurface
 from ansys.fluent.core.solver import VelocityInlet
 from colorama import Fore, Style
-from utils import project_to_plane
+from utils import project_to_plane, plot_velocity_contour
 
 
 ###############################################################################
@@ -27,6 +27,7 @@ solver_session = pyFluent.launch_fluent(
 )
 
 print(solver_session.get_fluent_version())
+cwd = os.getcwd()
 
 ###############################################################################
 # File module
@@ -108,6 +109,7 @@ outlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", z
 outlet_position = np.reshape(outlet_position, (-1, 3))
 
 outlet_vel = np.stack((sv_u, sv_v, sv_w), axis=1)
+outlet_vel_mag = np.linalg.norm(outlet_vel, axis=-1)
 #outletvel_mag = np.sqrt(u**2 + v**2 + w**2)
 print(outlet_vel.shape)
 print(outlet_vel[1][:])
@@ -121,8 +123,26 @@ print(outlet_position[1][:])
 # Draw a outlet velocity profile by plt
 #
 
+save_dir = os.path.join(cwd, "figure")
+os.makedirs(save_dir, exist_ok=True)
+save_path = os.path.join(save_dir, "vel_mag.png")
 coords2d, axis1, axis2, origin = project_to_plane(outlet_position, normal_unit, centroid_mean)
-    
+
+# Easy mode
+#fig, ax = plot_velocity_contour(coords2d, outlet_vel_mag)
+
+# Hard mode
+fig, ax = plot_velocity_contour(
+        points=coords2d, vel=outlet_vel_mag, 
+        cmap="viridis", fill_nan_method="nearest",   
+        grid_res=200, smooth_sigma=0.5, 
+        figsize=(4,12), levels=50)
+        
+
+fig.savefig(save_path, dpi=300, bbox_inches='tight')
+plt.show()
+plt.close(fig)
+
 
 ###############################################################################
 # Post-Processing Workflow
