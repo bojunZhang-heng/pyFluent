@@ -2,6 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 from scipy.ndimage import gaussian_filter
+from matplotlib.patches import Rectangle
+from matplotlib.font_manager import FontProperties, fontManager
+from matplotlib.ticker import ScalarFormatter
+import matplotlib.ticker as ticker
 
 def project_to_plane(points, normal, origin=None):
     normal = normal / np.linalg.norm(normal)             # Get the length of "normal" and divide it
@@ -20,136 +24,72 @@ def project_to_plane(points, normal, origin=None):
 
     return coords, axis1, axis2, origin
 
-
-def smooth_velocity_contour_physical(coords_m, speed,
-                                     outlet_size_mm=(10.0, 2.5),
-                                     grid_res=(400, 100),
-                                     method='cubic',
-                                     gaussian_sigma=1.0,
-                                     fill_method='nearest',
-                                     cmap='viridis',
-                                     show_scatter=False,
-                                     quiver_vecs_2d=None,
-                                     quiver_step=None,
-                                     quiver_scale=1.0,
-                                     figsize=(8,4),
-                                     savepath=None):
+def plot_velocity_contour(
+    points,                     # (N,2) or (N,3) array, coordinates in meters
+    vel,                        # (N,) velocity magnitude (same order as points)
+    grid_res=200,               # resolution for interpolation grid (grid_res x grid_res)
+    smooth_sigma=None,          # None or float sigma for gaussian_filter
+    cmap="viridis",
+    levels=50,
+    fill_nan_method="nearest",  # method to fill NaN from cubic interpolation
+    figsize=(8,4),
+):
     """
-    coords_m: (N,2) coordinates on plane in meters
-    speed: (N,) velocity magnitudes (any unit, e.g., m/s)
-    outlet_size_mm: tuple (width_mm, height_mm) physical size of outlet in mm (10 x 2.5)
-    grid_res: (nx, ny) grid resolution (higher -> smoother but slower)
-    method: interpolation ('cubic'|'linear'|'nearest')
-    gaussian_sigma: smoothing on the gridded field (in grid pixels)
-    fill_method: 'nearest' to fill NaNs after cubic interpolation, or None
-    quiver_vecs_2d: optional (N,2) projected velocity components to overlay arrows (units consistent)
-    quiver_step: subsampling step for quiver (None -> automatic)
-    quiver_scale: matplotlib quiver scale
-    savepath: filename to save figure (png/pdf) or None
-    Returns: X_mm, Y_mm, Z_smooth (grid in mm, and smoothed field)
+    Draw a velocity contour from scattered points.
+    - points: np.ndarray (N,2) or (N,3). Units: meters.
+    - vel: np.ndarray (N,)
     """
+    plt.rcParams['font.family'] = 'Times New Roman'
+    plt.rcParams['font.size'] = 12
+    plt.rcParams['axes.labelsize'] = 14
+    plt.rcParams['axes.titlesize'] = 16
+    plt.rcParams['xtick.labelsize'] = 12
+    plt.rcParams['ytick.labelsize'] = 12
 
-    # --- Convert coords from meters -> mm for plotting / physical sizing ---
-    coords_mm = np.asarray(coords_m) * 1000.0
-    x = coords_mm[:,0]
-    y = coords_mm[:,1]
-    w_mm, h_mm = outlet_size_mm
+    pts = np.asarray(points)
+    vel = np.asarray(vel)
 
-    # --- Define grid extent centered on the mean point, but clipped to cover data ---
-    cx, cy = x.mean(), y.mean()
-    half_w, half_h = w_mm/2.0, h_mm/2.0
+    if pts.ndim != 2 or pts.shape[0] != vel.shape[0]:
+        raise ValueError("points must be (N,2) or (N,3) and vel length must match N")
 
-    # grid extents (centered on centroid, using outlet physical size)
-    xmin, xmax = cx - half_w, cx + half_w
-    ymin, ymax = cy - half_h, cy + half_h
+    pts_x = pts[:, 0]
+    pts_y = pts[:, 1]
 
-    # ensure grid fully covers sample points (in case coords are slightly outside)
-    xmin = min(xmin, x.min())
-    xmax = max(xmax, x.max())
-    ymin = min(ymin, y.min())
-    ymax = max(ymax, y.max())
-
-    nx, ny = grid_res
-    xi = np.linspace(xmin, xmax, nx)
-    yi = np.linspace(ymin, ymax, ny)
+    grid_res = 200
+    # build grid
+    xi = np.linspace(pts_x.min(), pts_x.max(), grid_res)
+    yi = np.linspace(pts_y.min(), pts_y.max(), grid_res)
     X, Y = np.meshgrid(xi, yi)
 
-    # --- Interpolate scattered speed onto grid ---
-    Z = griddata((x, y), speed, (X, Y), method=method)
+    # cubic interpolation (smooth), may produce NaNs where extrapolation needed
+    V = griddata(pts, vel, (X, Y), method='cubic')
 
-    # fill NaNs with nearest if requested
-    if np.any(np.isnan(Z)) and fill_method == 'nearest':
-        Z_nearest = griddata((x, y), speed, (X, Y), method='nearest')
-        Z = np.where(np.isnan(Z), Z_nearest, Z)
+    # fill NaNs from a more robust method (nearest) where cubic failed
+    if np.any(np.isnan(V)):
+        V_nearest = griddata(pts, vel, (X, Y), method=fill_nan_method)
+        V = np.where(np.isnan(V), V_nearest, V)
 
-    # Gaussian smoothing on the gridded field
-    if gaussian_sigma is not None and gaussian_sigma > 0:
-        # handle NaNs before smoothing: replace small remaining NaNs with local mean (simple)
-        if np.any(np.isnan(Z)):
-            # replace NaN with nearest fill as fallback
-            Z = np.nan_to_num(Z, nan=np.nanmean(Z))
-        Z_smooth = gaussian_filter(Z, sigma=gaussian_sigma, mode='nearest')
-    else:
-        Z_smooth = Z
+    # optional gaussian smoothing
+    if smooth_sigma is not None and smooth_sigma > 0:
+        V = gaussian_filter(V, sigma=smooth_sigma, mode='nearest')
 
-    # --- Plotting ---
-    fig, ax = plt.subplots(figsize=figsize)
+    # prepare figure
+    fp_ticks = FontProperties(family=fp_title.get_family(), size=10)  # 刻度小一点
+    fp = FontProperties(family='Times New Roman', size=12)
 
-    # use pcolormesh (X,Y are in mm)
-    pcm = ax.pcolormesh(X, Y, Z_smooth, shading='auto', cmap=cmap)
-    cbar = fig.colorbar(pcm, ax=ax)
-    cbar.set_label('Velocity magnitude')
+    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+    cf = ax.contourf(X, Y, V, levels=levels, cmap=cmap)
+    cbar = fig.colorbar(cf, ax=ax, fraction=0.05, pad=0.02, aspect=30)
+    cbar.set_label("Velocity magnitude (m/s)", fontproperties=fp)
 
-    # optional contour lines for clarity
-    try:
-        cs = ax.contour(X, Y, Z_smooth, levels=8, colors='k', linewidths=0.5, alpha=0.6)
-        ax.clabel(cs, inline=True, fontsize=8, fmt='%.2f')
-    except Exception:
-        pass
 
-    # overlay original sample points
-    if show_scatter:
-        ax.scatter(x, y, c='white', s=10, edgecolor='k', linewidth=0.2, alpha=0.9, zorder=3)
+    # axes labels and aspect
+    ax.set_xlabel("X (m)", fontproperties=fp)
+    ax.set_ylabel("Y (m)", fontproperties=fp)
+    ax.set_title("Velocity contour", fontproperties=fp)
+    ax.set_aspect('equal', adjustable='box')
 
-    # optional quiver (projected 2D velocities provided in same mm-space scaling assumption)
-    if quiver_vecs_2d is not None:
-        u = quiver_vecs_2d[:,0]
-        v = quiver_vecs_2d[:,1]
-        # if user didn't pass step, determine a reasonable subsample
-        N = len(x)
-        if quiver_step is None:
-            quiver_step = max(1, int(N / 500))
-        ax.quiver(x[::quiver_step], y[::quiver_step], u[::quiver_step], v[::quiver_step],
-                  angles='xy', scale_units='xy', scale=quiver_scale, width=0.0025, zorder=4)
+    # scatter original points optionally (small and semi-transparent, helpful to see sampling)
+    ax.scatter(pts[:,0], pts[:,1], s=8, c='k', alpha=0.15)
 
-    # set axis labels and aspect, in mm (so physical proportions preserved)
-    ax.set_xlabel('Axis 1 (mm)')
-    ax.set_ylabel('Axis 2 (mm)')
-    ax.set_title('Smoothed velocity magnitude (mm units on axes)')
-    ax.set_aspect('equal', 'box')
-    ax.set_xlim(xmin, xmax)
-    ax.set_ylim(ymin, ymax)
-    plt.tight_layout()
-
-    if savepath:
-        fig.savefig(savepath, dpi=300)
-    plt.show()
-
-    return X, Y, Z_smooth
-
-# ---------------------------
-# 使用示例（假设你已有 coords (m) 和 speed (m/s)）：
-# coords_m = ...   # shape (N,2), 单位 m
-# speed = ...      # shape (N,), 单位 m/s
-# 若你已有 3D velocities 并做过平面投影得到 quiver_vecs (N,2)，可以传入 quiver_vecs_2d（注意单位）
-#
-# 示例调用（出口 10mm x 2.5mm）：
-# X_mm, Y_mm, Z = smooth_velocity_contour_physical(coords_m, speed,
-#                                                  outlet_size_mm=(10.0, 2.5),
-#                                                  grid_res=(400, 100),
-#                                                  method='cubic',
-#                                                  gaussian_sigma=1.2,
-#                                                  fill_method='nearest',
-#                                                  show_scatter=False,
-#                                                  quiver_vecs_2d=None,
-#                                                  savepath='velocity_contour.png')
+    return fig, ax
