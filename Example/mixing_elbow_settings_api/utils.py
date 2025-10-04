@@ -41,10 +41,10 @@ def plot_velocity_contour(
     """
     plt.rcParams['font.family'] = 'Times New Roman'
     plt.rcParams['font.size'] = 12
-    plt.rcParams['axes.labelsize'] = 14
+    plt.rcParams['axes.labelsize'] = 12
     plt.rcParams['axes.titlesize'] = 16
-    plt.rcParams['xtick.labelsize'] = 12
-    plt.rcParams['ytick.labelsize'] = 12
+    plt.rcParams['xtick.labelsize'] = 10
+    plt.rcParams['ytick.labelsize'] = 10
 
     pts = np.asarray(points)
     vel = np.asarray(vel)
@@ -74,22 +74,20 @@ def plot_velocity_contour(
         V = gaussian_filter(V, sigma=smooth_sigma, mode='nearest')
 
     # prepare figure
-    fp_ticks = FontProperties(family=fp_title.get_family(), size=10)  # 刻度小一点
-    fp = FontProperties(family='Times New Roman', size=12)
-
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
     cf = ax.contourf(X, Y, V, levels=levels, cmap=cmap)
     cbar = fig.colorbar(cf, ax=ax, fraction=0.05, pad=0.02, aspect=30)
-    cbar.set_label("Velocity magnitude (m/s)", fontproperties=fp)
+    cbar.set_label("Velocity magnitude (m/s)", fontsize=10)  # 或者 11、12
 
 
     # axes labels and aspect
-    ax.set_xlabel("X (m)", fontproperties=fp)
-    ax.set_ylabel("Y (m)", fontproperties=fp)
-    ax.set_title("Velocity contour", fontproperties=fp)
+    ax.set_xlabel("X (mm)" )
+    ax.set_ylabel("Y (mm)")
+    ax.set_title("Velocity contour")
     ax.set_aspect('equal', adjustable='box')
 
     # scatter original points optionally (small and semi-transparent, helpful to see sampling)
     ax.scatter(pts[:,0], pts[:,1], s=8, c='k', alpha=0.15)
 
     return fig, ax
+
