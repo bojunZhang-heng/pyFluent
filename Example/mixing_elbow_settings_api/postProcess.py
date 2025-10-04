@@ -110,7 +110,6 @@ outlet_position = np.reshape(outlet_position, (-1, 3))
 
 outlet_vel = np.stack((sv_u, sv_v, sv_w), axis=1)
 outlet_vel_mag = np.linalg.norm(outlet_vel, axis=-1)
-#outletvel_mag = np.sqrt(u**2 + v**2 + w**2)
 print(outlet_vel.shape)
 print(outlet_vel[1][:])
 
@@ -128,16 +127,27 @@ os.makedirs(save_dir, exist_ok=True)
 save_path = os.path.join(save_dir, "vel_mag.png")
 coords2d, axis1, axis2, origin = project_to_plane(outlet_position, normal_unit, centroid_mean)
 
+
+# save and load
+np.savetxt(os.path.join(cwd, "pts.txt"), coords2d, fmt="%.6e", delimiter=" ")
+np.savetxt(os.path.join(cwd, "vel_mag.txt"), outlet_vel_mag, fmt="%.6e")
+pts = np.loadtxt(os.path.join(cwd, "pts.txt"))
+vel_mag = np.loadtxt(os.path.join(cwd, "vel_mag.txt"))
+
+
 # Easy mode
 #fig, ax = plot_velocity_contour(coords2d, outlet_vel_mag)
 
 # Hard mode
+np.multiply(coords2d, 1000, out=coords2d)
 fig, ax = plot_velocity_contour(
         points=coords2d, vel=outlet_vel_mag, 
         cmap="viridis", fill_nan_method="nearest",   
         grid_res=200, smooth_sigma=0.5, 
-        figsize=(4,12), levels=50)
-        
+        figsize=(8,4), levels=50)
+
+if os.path.exists(save_path):
+    os.remove(save_path)
 
 fig.savefig(save_path, dpi=300, bbox_inches='tight')
 plt.show()
@@ -151,6 +161,8 @@ plt.close(fig)
 # Create a contour of velocity magnitude, show and save
 #
 
+solver_results = solver_session.results
+
 graphics = solver_results.graphics
 graphics.contour["velocity_outlet"] = {
         "field": "velocity-magnitude",
@@ -161,6 +173,7 @@ velocity_outlet = solver_results.graphics.contour["velocity_outlet"]
 velocity_outlet.range_options = {
                     "auto_range": True
                 }
+
 velocity_outlet.print_state()
 velocity_outlet.display()
 
@@ -169,14 +182,13 @@ graphics.views.auto_scale()
 graphics.picture.save_picture(file_name="outlet_surf_velocity_magnitude.png")
 
 
-
 ###############################################################################
 # Close Fluent
 # ~~~~~~~~~~~~
 # Close Fluent.
 #
 
-#solver_session.exit()
+solver_session.exit()
 
 
 
