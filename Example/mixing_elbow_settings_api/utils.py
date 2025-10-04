@@ -40,11 +40,6 @@ def plot_velocity_contour(
     - vel: np.ndarray (N,)
     """
     plt.rcParams['font.family'] = 'Times New Roman'
-    plt.rcParams['font.size'] = 12
-    plt.rcParams['axes.labelsize'] = 12
-    plt.rcParams['axes.titlesize'] = 16
-    plt.rcParams['xtick.labelsize'] = 10
-    plt.rcParams['ytick.labelsize'] = 10
 
     pts = np.asarray(points)
     vel = np.asarray(vel)
@@ -77,17 +72,19 @@ def plot_velocity_contour(
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
     cf = ax.contourf(X, Y, V, levels=levels, cmap=cmap)
     cbar = fig.colorbar(cf, ax=ax, fraction=0.05, pad=0.02, aspect=30)
-    cbar.set_label("Velocity magnitude (m/s)", fontsize=10)  # 或者 11、12
+    cbar.set_label("Velocity magnitude (m/s)", fontsize=8)  
+    cbar.ax.tick_params(labelsize=7)                # 刻度字体大小
 
 
     # axes labels and aspect
-    ax.set_xlabel("X (mm)" )
-    ax.set_ylabel("Y (mm)")
-    ax.set_title("Velocity contour")
+    ax.set_xlabel("X (mm)", fontsize=9)
+    ax.set_ylabel("Y (mm)", fontsize=9)
+    ax.tick_params(axis='both', labelsize=8)
+    ax.set_title("Velocity contour", fontsize=10)
     ax.set_aspect('equal', adjustable='box')
 
     # scatter original points optionally (small and semi-transparent, helpful to see sampling)
-    ax.scatter(pts[:,0], pts[:,1], s=8, c='k', alpha=0.15)
+    ax.scatter(pts[:,0], pts[:,1], s=4, c='k', alpha=0.12, marker='.', linewidth=0)
 
     return fig, ax
 
