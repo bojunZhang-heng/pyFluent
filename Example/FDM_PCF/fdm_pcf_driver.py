@@ -7,7 +7,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import ansys.fluent.core as pyFluent
+import ansys.fluent.core as pyfluent
 from ansys.fluent.core import SurfaceDataType, SurfaceFieldDataRequest
 from ansys.fluent.visualization import Contour, GraphicsWindow, PlaneSurface
 from ansys.fluent.core.solver import VelocityInlet
@@ -35,7 +35,7 @@ color = get_colors()
 # two processor, print fluent version
 # Redirect all fluent mesg into a specified file
 
-solver_session = pyFluent.launch_fluent(
+solver_session = pyfluent.launch_fluent(
     precision="double",
     processor_count=2,
     mode="solver",
