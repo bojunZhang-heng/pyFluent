@@ -20,16 +20,6 @@ sys.path.append('./src')
 from utils import project_to_plane, plot_velocity_contour
 from other_utils import setup_logger, get_colors
 
-
-###############################################################################
-# Set up logging and  colorama
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-exp_dir = os.path.join('experiments', "FDM_PCF")
-os.makedirs(exp_dir, exist_ok=True)
-timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-log_file = os.path.join(exp_dir, f"solver_{timestamp}.log")
-setup_logger(log_file)
-
 color = get_colors()
 
 ###############################################################################
