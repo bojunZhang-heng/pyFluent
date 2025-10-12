@@ -5,6 +5,7 @@
 
 
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import ansys.fluent.core as pyfluent
@@ -12,10 +13,12 @@ from ansys.fluent.core import SurfaceDataType, SurfaceFieldDataRequest
 from ansys.fluent.visualization import Contour, GraphicsWindow, PlaneSurface
 from ansys.fluent.core.solver import VelocityInlet
 from colorama import Fore, Style
-from utils import project_to_plane, plot_velocity_contour
-from other_utils import setup_logger, get_colors
 from colorama import Fore, Style
 from datetime import datetime
+
+sys.path.append('./src')
+from utils import project_to_plane, plot_velocity_contour
+from other_utils import setup_logger, get_colors
 
 
 ###############################################################################
@@ -41,6 +44,7 @@ solver_session = pyfluent.launch_fluent(
     mode="solver",
 )
 
+version_tag = "v1"
 cwd = os.getcwd()
 print(solver_session.get_fluent_version())
 
@@ -50,9 +54,9 @@ print(solver_session.get_fluent_version())
 # Import mesh and perform mesh check
 # save the current dir
 
-mesh_file=r"E:\Ansys_simulation\3Dprinted\FDM-PCF.msh"
-save_path=os.getcwd()
-solver_session.settings.file.read_case(file_name=mesh_file)
+mesh_dir = os.path.join(cwd, "mesh")
+mesh_path = os.path.join(mesh_dir, f"FDM_PCF_{version_tag}.msh")
+solver_session.settings.file.read_case(file_name=mesh_path)
 solver_session.settings.mesh.check()
 
 ###############################################################################
@@ -100,7 +104,7 @@ solver_materials.fluid["air"].set_state(air_dict)
 #
 
 # Take the default
-#solver_session.setup.cell_zone_conditions.fluid[""].general.matiral = ("air")
+#solver_session.setup.cell_zone_conditions.fluid["interior-part_1"].general.matiral = ("air")
 
 
 ###############################################################################
@@ -146,6 +150,20 @@ outlet.turbulence.turbulent_viscosity_ratio = 10
 #solver_methods.flow_scheme = "SIMPLE"
 
 ###############################################################################
+# Check convergence criteria
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+
+residuals_options = solver_session.settings.solution.monitor.residual
+residuals_options.equations["continuity"].absolute_criteria = 0.0001
+residuals_options.equations["continuity"].monitor = True                # Enable continuity residuals
+residuals_options.equations["x-velocity"].absolute_criteria = 0.0001
+residuals_options.equations["y-velocity"].absolute_criteria = 0.0001
+residuals_options.equations["z-velocity"].absolute_criteria = 0.0001
+residuals_options.equations["k"].absolute_criteria = 0.0001
+residuals_options.equations["omega"].absolute_criteria = 0.0001
+
+###############################################################################
 # Solution module: Initialize flow field
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Initialize the flow field using hybrid initialization.
@@ -167,7 +185,10 @@ solver_solution.run_calculation.iterate(iter_count=100)
 # ~~~~~~~~~~~~~~~~~~
 #
 
-solver_session.settings.file.write(file_type="case-data", file_name="FDM-PCF.cas.h5")
+data_dir = os.path.join(cwd, "data")
+os.makedirs(data_dir, exist_ok=True)
+case_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}.cas.h5")
+solver_session.settings.file.write(file_type="case-data", file_name=case_path)
 
 ###############################################################################
 # Field_data Module
@@ -235,8 +256,32 @@ print(outlet_vel[1][:])
 print(outlet_position.shape)
 print(outlet_position[1][:])
 
-
 ###############################################################################
+# Validation
+# ~~~~~~~~~~
+#
+
+# Check mass flow rate
+print(color["R"] + "--------------- Check mass flow rate -------------------------" + color["RESET"])
+solver_report = solver_session.solution.report_definitions
+solver_report.flux["mass_flow_rate"] = {}
+
+mass_flow_rate = solver_report.flux["mass_flow_rate"] 
+mass_flow_rate.boundaries = [
+        "inlet",
+        "outlet",
+]
+mass_flow_rate.per_zone = True
+mass_flow_rate.print_state()
+solver_report.compute(report_defs=["mass_flow_rate"])
+
+# Check state and other choices
+mass_flow_rate.print_state()
+mass_flow_rate.report_type.allowed_values()
+mass_flow_rate.boundaries.allowed_values()
+mass_flow_rate.get_state()
+
+########################################################################l#######
 # Result module: Configure graphics picture export
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
@@ -279,12 +324,23 @@ velocity_outlet.range_options = {
                     "auto_range": True
                 }
 
+#velocity_outlet.range_option.option = (
+#    "auto-range-off"
+#)
+#velocity_outlet.range_option.set_state(
+#    {
+#        "auto_range_off": {"maximum": 60, "minimum": 0, "clip_to_range": False},
+#    }
+#)
+
 velocity_outlet.print_state()
 velocity_outlet.display()
 
 graphics.views.restore_view(view_name="front")
 graphics.views.auto_scale()
-graphics.picture.save_picture(file_name="outlet_surf_velocity_magnitude.png")
+figure_dir = os.path.join(cwd, "figure")
+figure_path = os.path.join(figure_dir, f"outlet_surf_velocity_magnitude_{version_tag}.png")
+graphics.picture.save_picture(file_name=figure_path)
 
 
 ###############################################################################
@@ -293,16 +349,17 @@ graphics.picture.save_picture(file_name="outlet_surf_velocity_magnitude.png")
 # Draw a outlet velocity profile by plt
 #
 
-save_dir = os.path.join(cwd, "figure")
-os.makedirs(save_dir, exist_ok=True)
-save_path = os.path.join(save_dir, "vel_mag.png")
+figure_dir = os.path.join(cwd, "figure")
+os.makedirs(figure_dir, exist_ok=True)
+figure_path = os.path.join(figure_dir, f"vel_mag_{version_tag}.png")
 coords2d, axis1, axis2, origin = project_to_plane(outlet_position, normal_unit, centroid_mean)
 
 # save and load
-np.savetxt(os.path.join(cwd, "pts.txt"), coords2d, fmt="%.6e", delimiter=" ")
-np.savetxt(os.path.join(cwd, "vel_mag.txt"), outlet_vel_mag, fmt="%.6e")
-pts = np.loadtxt(os.path.join(cwd, "pts.txt"))
-vel_mag = np.loadtxt(os.path.join(cwd, "vel_mag.txt"))
+np.savetxt(os.path.join(data_dir, f"pts_{version_tag}.txt"), coords2d, fmt="%.6e", delimiter=" ")
+np.savetxt(os.path.join(data_dir, f"vel_mag_{version_tag}.txt"), outlet_vel_mag, fmt="%.6e")
+
+pts = np.loadtxt(os.path.join(data_dir, f"pts_{version_tag}.txt"))
+vel_mag = np.loadtxt(os.path.join(data_dir, f"vel_mag_{version_tag}.txt"))
 
 
 # Easy mode
@@ -316,12 +373,13 @@ fig, ax = plot_velocity_contour(
         grid_res=200, smooth_sigma=0.5, 
         figsize=(8,4), levels=50)
 
-if os.path.exists(save_path):
-    os.remove(save_path)
+if os.path.exists(figure_path):
+    os.remove(figure_path)
 
-fig.savefig(save_path, dpi=300, bbox_inches='tight')
+fig.savefig(figure_path, dpi=300, bbox_inches='tight')
 plt.show()
 plt.close(fig)
+
 
 ###############################################################################
 # Close Fluent
@@ -329,7 +387,7 @@ plt.close(fig)
 # Close Fluent.
 #
 
-solver_session.exit()
+#solver_session.exit()
 
 
 
