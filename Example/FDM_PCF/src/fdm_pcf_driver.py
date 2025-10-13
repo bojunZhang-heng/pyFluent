@@ -231,10 +231,18 @@ print(svu_info.name, svu_info.dimension, svu_info.field_type) # SV_U 1 <class 'n
 
 # Get Solution Variable Data 
 # The centroid data in SV is the same as field data
+zone_names = ["outlet"]                      
+vars_info = solution_variable_info.get_variables_info(zone_names=zone_names, domain_name=domain_name)
+print("Available SVAR names:", vars_info.solution_variables)  # e.g. ['SV_U', 'SV_V', 'SV_P', 'SV_W']
 solution_variable_data = solver_session.fields.solution_variable_data  
 sv_u = solution_variable_data.get_data(variable_name="SV_U", zone_names=zone_names, domain_name=domain_name)['outlet'] 
 sv_v = solution_variable_data.get_data(variable_name="SV_V", zone_names=zone_names, domain_name=domain_name)['outlet']
 sv_w = solution_variable_data.get_data(variable_name="SV_W", zone_names=zone_names, domain_name=domain_name)['outlet']
+
+# Get wall pressure
+zone_names = ["wall"]
+sv_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['wall']
+print(sv_p.shape)
 outlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name)['outlet']
 outlet_position = np.reshape(outlet_position, (-1, 3))
 
