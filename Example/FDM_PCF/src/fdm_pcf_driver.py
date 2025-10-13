@@ -191,13 +191,15 @@ solver_session.settings.file.write(file_type="case-data", file_name=case_path)
 field_data = solver_session.fields.field_data
 
 face_data_request = SurfaceFieldDataRequest(
-        surfaces=["outlet"],
+        surfaces=["wall"],
         data_types=[SurfaceDataType.FacesNormal,
                     SurfaceDataType.FacesCentroid,
+                    SurfaceDataType.Vertices,
                    ]
         )
-all_data = field_data.get_field_data(face_data_request)["outlet"]
+all_data = field_data.get_field_data(face_data_request)["wall"]
 
+# Get normal data
 normal_data = all_data.face_normals
 normal_mean = normal_data.mean(axis=0)
 normal_unit = normal_mean / np.linalg.norm(normal_mean)
@@ -207,6 +209,10 @@ print(normal_data.shape)
 centroid_data = all_data.face_centroids
 centroid_mean = centroid_data.mean(axis=0)
 print(centroid_data.shape)
+
+# Get vertex data
+vertex_data = all_data.vertices
+print(vertex_data.shape)
 
 ###############################################################################
 # Get Solution Info
@@ -238,14 +244,9 @@ solution_variable_data = solver_session.fields.solution_variable_data
 sv_u = solution_variable_data.get_data(variable_name="SV_U", zone_names=zone_names, domain_name=domain_name)['outlet'] 
 sv_v = solution_variable_data.get_data(variable_name="SV_V", zone_names=zone_names, domain_name=domain_name)['outlet']
 sv_w = solution_variable_data.get_data(variable_name="SV_W", zone_names=zone_names, domain_name=domain_name)['outlet']
-
-# Get wall pressure
-zone_names = ["wall"]
-sv_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['wall']
-print(sv_p.shape)
 outlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name)['outlet']
-outlet_position = np.reshape(outlet_position, (-1, 3))
 
+outlet_position = np.reshape(outlet_position, (-1, 3))
 outlet_vel = np.stack((sv_u, sv_v, sv_w), axis=1)
 outlet_vel_mag = np.linalg.norm(outlet_vel, axis=-1)
 print(outlet_vel.shape)
@@ -253,6 +254,21 @@ print(outlet_vel[1][:])
 
 print(outlet_position.shape)
 print(outlet_position[1][:])
+
+# Get wall pressure
+# sv_area stores area vector, three component, taking norm to get scalar
+zone_names = ["wall"]
+sv_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['wall']
+sv_area = solution_variable_data.get_data(variable_name="SV_AREA", zone_names=zone_names, domain_name=domain_name)['wall']
+area_vector = sv_area.reshape(-1, 3)
+area_scalar = np.linalg.norm(area_vector, axis=-1)
+
+print(area_scalar.shape)
+print(sv_p.shape)
+print(sv_area.shape)
+
+total_pressure_force = np.sum(sv_p * area_scalar)
+print(f"Total pressure on wall: {total_pressure_force}")
 
 ###############################################################################
 # Validation
