@@ -1,0 +1,97 @@
+    H:\ANSYS2025R1\ANSYS Inc\v251\commonfiles\CPython\3_10\winx64\Release\python\..\Ansys\TGrid\CADReaders.py started by 10021 on heng-924 winx64 on Mon Oct  6 09:39:45 2025
+    using Python 3.10.14 (remotes/origin/fc7956328a802ed00ef70afbb7b8a7c425877c24-dirty:fc795632, Oct 29 2) [MSC v.1941 64 bit (AMD64)]
+    
+    using Ansys.Meshing.FieldMesher build Nov 25 2024 23:35:09
+    
+    running ANSYS TGrid CADToTGridConverter ...
+    setting up parameters ...
+    setting up parameters done.
+    running conversion ...
+    converting 1 file(s) from Workbench to FLTG using output path 'E:\Ansys_simulation\pyFluent\Example\mixing_elbow_settings_api\FM_heng-924_12464/out1759714669.48512912464.tgf'
+    converting file 'FFF.scdocx' (1 of 1) from Workbench to FLTG using output path 'E:\Ansys_simulation\pyFluent\Example\mixing_elbow_settings_api\FM_heng-924_12464'
+    importing data ...
+    importing meshing model from PartMgr from file 'E:\Ansys_simulation\3Dprinted\FDM-PartCooling_files\dp0\FFF\DM\FFF.scdocx' ...
+    setting enclosure and symmetry processing to False
+    setting transfer named selections to True
+    setting named selection prefixes to ''
+    setting mixed import resolution type to 'SolidAndSurface'
+    setting target application to 'FluentMeshing'
+    attaching to assembly ...
+    attaching to assembly done in 160.591 [s]
+    Warning: ?????????
+    processing assembly 'E:\Ansys_simulation\3Dprinted\FDM-PartCooling_files\dp0\FFF\DM\FFF.scdocx' with ID 1 and reference key '<?xml version="1.0" encoding="utf-16"?>
+    <IdTable xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <Table>
+        <Entry>
+          <AssemblyVersionInfo>
+            <AssemblySavedVersion>2147483647</AssemblySavedVersion>
+            <AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>
+            <MigrateToCompressedLabelIsDisabled>false</MigrateToCompressedLabelIsDisabled>
+          </AssemblyVersionInfo>
+          <Text>~sE01ed61a0-296d-4c99-88ef-99f6ff19c304.2_#</Text>
+          <ExplodedBodyText>~sEab4e87d2-9cc8-471b-8191-08dedd68ffac.660_#</ExplodedBodyText>
+          <Id>10000</Id>
+          <IsExploded>true</IsExploded>
+        </Entry>
+        <Entry>
+          <AssemblyVersionInfo>
+            <AssemblySavedVersion>2147483647</AssemblySavedVersion>
+            <AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>
+            <MigrateToCompressedLabelIsDisabled>false</MigrateToCompressedLabelIsDisabled>
+          </AssemblyVersionInfo>
+          <Text>~sE01ed61a0-296d-4c99-88ef-99f6ff19c304.2_#</Text>
+          <ExplodedBodyText>~sEff2d6bac-c6a4-4ba7-8779-f8de824dd248.488_#</ExplodedBodyText>
+          <Id>10001</Id>
+          <IsExploded>true</IsExploded>
+        </Entry>
+      </Table>
+      <AssemblyVersionInfo>
+        <AssemblySavedVersion>2147483647</AssemblySavedVersion>
+        <AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>
+        <MigrateToCompressedLabelIsDisabled>false</MigrateToCompressedLabelIsDisabled>
+      </AssemblyVersionInfo>
+    </IdTable>'
+    length unit = [m]
+    processing part 'FFF' with ID 3
+    processing part 'FFF' with ID 5
+    processing data ...
+    removing named collections of entities ...
+    removing named collections of entities stopped, no named collections selected.
+    analyzing feature edges ...
+    detecting feature edges, feature angle = 40 [deg] ...
+        Data information
+            Meshing model
+                Attributes:
+                    'LengthUnit': '[mm]'
+                Entity summary:
+                    Component: 3
+                    Body     : 2
+                    Shell    : 2
+                    Face     : 16
+                    Loop     : 16
+                    Edge     : 33
+                    Vertex   : 21
+                    Surface  : 16
+                    Curve    : 33
+                Tessellation summary:
+                    Face facets  : 4038
+                    Edge segments: 549
+                Bounding box:
+                    (-14.99374771118164, -15.227952003479, 0) x (14.99888801574707, 14.99907112121582, 30.88388442993164)
+                Assembly component hierarchy:
+                    'E:\Ansys_simulation\3Dprinted\FDM-PartCooling_files\dp0\FFF\DM\FFF.scdocx'
+                      'FFF'
+                      'FFF'
+    
+    
+    exporting FLTG data to file 'E:\Ansys_simulation\pyFluent\Example\mixing_elbow_settings_api\FM_heng-924_12464\out1759714669.48512912464.tgf' ...
+    writing face-based mesh file 'E:\Ansys_simulation\pyFluent\Example\mixing_elbow_settings_api\FM_heng-924_12464\out1759714669.48512912464.tgf' ...
+    ======== Exported Data ========
+    Entity summary:
+        Object       : 2
+        Object region: 2
+        Zone         : 4
+    
+    running conversion done.
+    running ANSYS TGrid CADToTGridConverter done.
+    ran ANSYS TGrid CADToTGridConverter in 162.738 [s]

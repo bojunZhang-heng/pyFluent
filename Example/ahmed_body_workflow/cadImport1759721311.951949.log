@@ -1,0 +1,119 @@
+    H:\ANSYS2025R1\ANSYS Inc\v251\commonfiles\CPython\3_10\winx64\Release\python\..\Ansys\TGrid\CADReaders.py started by 10021 on heng-924 winx64 on Mon Oct  6 11:28:32 2025
+    using Python 3.10.14 (remotes/origin/fc7956328a802ed00ef70afbb7b8a7c425877c24-dirty:fc795632, Oct 29 2) [MSC v.1941 64 bit (AMD64)]
+    
+    using Ansys.Meshing.FieldMesher build Nov 25 2024 23:35:09
+    
+    running ANSYS TGrid CADToTGridConverter ...
+    setting up parameters ...
+    setting up parameters done.
+    running conversion ...
+    converting 1 file(s) from Workbench to FLTG using output path 'E:\Ansys_simulation\pyFluent\Example\ahmed_body_workflow\FM_heng-924_10396/out1759721311.93633410396.tgf'
+    converting file 'ahmed_body_20_0degree_boi_half.scdoc.pmdb' (1 of 1) from Workbench to FLTG using output path 'E:\Ansys_simulation\pyFluent\Example\ahmed_body_workflow\FM_heng-924_10396'
+    importing data ...
+    importing meshing model from PartMgr from file 'E:\Ansys_simulation\pyFluent\Example\ahmed_body_workflow\FM_heng-924_10396\\ahmed_body_20_0degree_boi_half.scdoc.pmdb' ...
+    setting enclosure and symmetry processing to False
+    setting transfer named selections to True
+    setting named selection prefixes to ''
+    setting mixed import resolution type to 'SolidAndSurface'
+    setting target application to 'FluentMeshing'
+    initializing part manager from file ...
+    processing assembly 'E:\Ansys_simulation\pyFluent\Example\ahmed_body_workflow\ahmed_body_20_0degree_boi_half.scdoc' with ID 1 and reference key '<?xml version="1.0" encoding="utf-16"?>
+    <IdTable xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <Table>
+        <Entry>
+          <AssemblyVersionInfo>
+            <AssemblySavedVersion>2147483647</AssemblySavedVersion>
+            <AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>
+            <MigrateToCompressedLabelIsDisabled>false</MigrateToCompressedLabelIsDisabled>
+          </AssemblyVersionInfo>
+          <Text>~sO_~iI7296ae44-1a5b-4582-a878-919353571ac0.100_#~oE7296ae44-1a5b-4582-a878-919353571ac0.96_#_</Text>
+          <Id>10000</Id>
+          <IsExploded>false</IsExploded>
+        </Entry>
+        <Entry>
+          <AssemblyVersionInfo>
+            <AssemblySavedVersion>2147483647</AssemblySavedVersion>
+            <AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>
+            <MigrateToCompressedLabelIsDisabled>false</MigrateToCompressedLabelIsDisabled>
+          </AssemblyVersionInfo>
+          <Text>~sE34ca5c87-d66e-46ab-a2aa-19feb3035cfe.2_#</Text>
+          <Id>10001</Id>
+          <IsExploded>false</IsExploded>
+        </Entry>
+      </Table>
+      <AssemblyVersionInfo>
+        <AssemblySavedVersion>2147483647</AssemblySavedVersion>
+        <AssemblySavedBuildDate>2147483647</AssemblySavedBuildDate>
+        <MigrateToCompressedLabelIsDisabled>false</MigrateToCompressedLabelIsDisabled>
+      </AssemblyVersionInfo>
+    </IdTable>'
+    length unit = [m]
+    processing part 'Component1' with ID 3
+    processing part 'ahmed_body_20_0degree_boi_half' with ID 5
+    processing named selection 'wall_ahmed_body_main'
+    processing named selection 'wall_mount'
+    processing named selection 'inlet'
+    processing named selection 'outlet'
+    processing named selection 'symmetry_x_pos'
+    processing named selection 'symmetry_top'
+    processing named selection 'wall_ground'
+    processing named selection 'wall_ahmed_body_front'
+    processing named selection 'wall_ahmed_body_rear'
+    processing named selection 'symmetry_centerplane'
+    processing data ...
+    loading size function background grid from file 'E:\Ansys_simulation\pyFluent\Example\ahmed_body_workflow\FM_heng-924_10396\\ahmed_body_20_0degree_boi_half.sf' ...
+    reading size function background grid file 'E:\Ansys_simulation\pyFluent\Example\ahmed_body_workflow\FM_heng-924_10396\\ahmed_body_20_0degree_boi_half.sf' ...
+     Read 126027 vertices
+    initializing size function background grid done in 0.05 [s]
+    removing named collections of entities ...
+    removing named collections of entities stopped, no named collections selected.
+    analyzing feature edges ...
+    detecting feature edges, feature angle = 40 [deg], secondary feature angle = 5 [deg] ...
+        Data information
+            Meshing model
+                Attributes:
+                    'LengthUnit': '[mm]'
+                Entity summary:
+                    Collection: 10
+                    Component : 3
+                    Body      : 2
+                    Shell     : 2
+                    Face      : 23
+                    Loop      : 30
+                    Edge      : 50
+                    Vertex    : 30
+                    Surface   : 23
+                    Curve     : 50
+                Tessellation summary:
+                    Face facets  : 119154
+                    Edge segments: 2164
+                Bounding box:
+                    (-500, 0, -2088) x (1167, 1014, 2088)
+                Assembly component hierarchy:
+                    'E:\Ansys_simulation\pyFluent\Example\ahmed_body_workflow\ahmed_body_20_0degree_boi_half.scdoc'
+                      'Component1'
+                      'ahmed_body_20_0degree_boi_half'
+                NamedCollections:
+                    'wall_ahmed_body_main'
+                    'wall_mount'
+                    'inlet'
+                    'outlet'
+                    'symmetry_x_pos'
+                    'symmetry_top'
+                    'wall_ground'
+                    'wall_ahmed_body_front'
+                    'wall_ahmed_body_rear'
+                    'symmetry_centerplane'
+    
+    
+    exporting FLTG data to file 'E:\Ansys_simulation\pyFluent\Example\ahmed_body_workflow\FM_heng-924_10396\out1759721311.93633410396.tgf' ...
+    writing face-based mesh file 'E:\Ansys_simulation\pyFluent\Example\ahmed_body_workflow\FM_heng-924_10396\out1759721311.93633410396.tgf' ...
+    ======== Exported Data ========
+    Entity summary:
+        Object       : 2
+        Object region: 12
+        Zone         : 36
+    
+    running conversion done.
+    running ANSYS TGrid CADToTGridConverter done.
+    ran ANSYS TGrid CADToTGridConverter in 1.062 [s]
