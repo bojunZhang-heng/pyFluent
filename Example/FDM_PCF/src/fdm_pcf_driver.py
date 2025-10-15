@@ -50,7 +50,7 @@ solver_session.settings.file.read_case(file_name=mesh_path)
 solver_session.settings.mesh.check()
 
 ###############################################################################
-# General Moudle
+# General Module
 # ~~~~~~~~~~~~~~
 # Set transient time
 #
@@ -77,7 +77,7 @@ solver_model.k_omega_model = "sst"
 # Create a material named "Air"
 #
 
-print(color["R"] + "--------------- Matrials -------------------------" + color["RESET"])
+print(color["R"] + "--------------- Materials -------------------------" + color["RESET"])
 solver_materials = solver_session.settings.setup.materials
 solver_materials.database.copy_by_name(type="fluid", name="air")
 air_dict = solver_materials.fluid["air"].get_state()
@@ -94,13 +94,13 @@ solver_materials.fluid["air"].set_state(air_dict)
 #
 
 # Take the default
-#solver_session.setup.cell_zone_conditions.fluid["interior-part_1"].general.matiral = ("air")
+#solver_session.setup.cell_zone_conditions.fluid["interior-part_1"].general.material = ("air")
 
 
 ###############################################################################
 # Set up boundary conditions for CFD analysis
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# for the "inlet", "outlet", "wall"
+# for the "inlet", "outlet", "wall
 #
 #
 
@@ -109,8 +109,8 @@ solver_materials.fluid["air"].set_state(air_dict)
 # Velocity Magnitude: 1.5[m/s]
 # Turbulent module:
 #    Specification Method: Intensity and Viscosity Ratio
-#    Turbluent Intensity: 5 [%]
-#    Turbulent Viscosity Rati [10]
+#    Turbulent Intensity: 5 [%]
+#    Turbulent Viscosity Rate [10]
 inlet = solver_session.settings.setup.boundary_conditions.velocity_inlet["inlet"]
 inlet.momentum.velocity_magnitude.value = 1.5
 inlet.turbulence.turbulence_specification = "Intensity and Viscosity Ratio"
@@ -159,13 +159,13 @@ residuals_options.equations["omega"].absolute_criteria = 0.0001
 # Initialize the flow field using hybrid initialization.
 #
 
-print(color["R"] + "---------------Initialization moudel-------------------------" + color["RESET"])
+print(color["R"] + "---------------Initialization module-------------------------" + color["RESET"])
 solver_session.settings.solution.initialization.hybrid_initialize()
 
 ###############################################################################
 # Solution module: Set run Caculation
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# SOlve for 150 iterations
+# Solve for 150 iterations
 
 solver_solution = solver_session.settings.solution
 solver_solution.run_calculation.iterate(iter_count=100)
@@ -241,41 +241,84 @@ zone_names = ["outlet"]
 vars_info = solution_variable_info.get_variables_info(zone_names=zone_names, domain_name=domain_name)
 print("Available SVAR names:", vars_info.solution_variables)  # e.g. ['SV_U', 'SV_V', 'SV_P', 'SV_W']
 solution_variable_data = solver_session.fields.solution_variable_data  
+
+# Outlet solution
+zone_names = ["outlet"]                      
 sv_u = solution_variable_data.get_data(variable_name="SV_U", zone_names=zone_names, domain_name=domain_name)['outlet'] 
 sv_v = solution_variable_data.get_data(variable_name="SV_V", zone_names=zone_names, domain_name=domain_name)['outlet']
 sv_w = solution_variable_data.get_data(variable_name="SV_W", zone_names=zone_names, domain_name=domain_name)['outlet']
-outlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name)['outlet']
-
-outlet_position = np.reshape(outlet_position, (-1, 3))
 outlet_vel = np.stack((sv_u, sv_v, sv_w), axis=1)
 outlet_vel_mag = np.linalg.norm(outlet_vel, axis=-1)
-print(outlet_vel.shape)
-print(outlet_vel[1][:])
+w_outlet_m = np.mean(outlet_vel[:,2])
 
+print(outlet_vel.shape)
+print(w_outlet_m)
+
+zone_names = ["outlet"]
+outlet_area = solution_variable_data.get_data(variable_name="SV_AREA", zone_names=zone_names, domain_name=domain_name)['outlet']
+outlet_area = outlet_area.reshape(-1, 3)
+outlet_area = np.linalg.norm(outlet_area, axis=-1)
+print(outlet_area.shape)
+
+zone_names = ["outlet"]
+outlet_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['outlet']
+outlet_p = np.sum(outlet_p * outlet_area)
+print(f"Total pressure on outlet: {outlet_p}")
+
+
+outlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name)['outlet']
+outlet_position = np.reshape(outlet_position, (-1, 3))
 print(outlet_position.shape)
 print(outlet_position[1][:])
+
+# Inlet solution
+zone_names = ["inlet"]
+sv_u = solution_variable_data.get_data(variable_name="SV_U", zone_names=zone_names, domain_name=domain_name)['inlet'] 
+sv_v = solution_variable_data.get_data(variable_name="SV_V", zone_names=zone_names, domain_name=domain_name)['inlet']
+sv_w = solution_variable_data.get_data(variable_name="SV_W", zone_names=zone_names, domain_name=domain_name)['inlet']
+inlet_vel = np.stack((sv_u, sv_v, sv_w), axis=1)
+inlet_vel_mag = np.linalg.norm(inlet_vel, axis=-1)
+
+w_inlet_m = np.mean(inlet_vel[:,2])
+print(w_inlet_m)
+
+zone_names = ["inlet"]
+inlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name)['inlet']
+inlet_position = np.reshape(inlet_position, (-1, 3))
+print(inlet_position.shape)
+print(inlet_position[1][:])
+
+zone_names = ["inlet"]
+inlet_area = solution_variable_data.get_data(variable_name="SV_AREA", zone_names=zone_names, domain_name=domain_name)['inlet']
+inlet_area = inlet_area.reshape(-1, 3)
+inlet_area = np.linalg.norm(inlet_area, axis=-1)
+print(inlet_area.shape)
+
+zone_names = ["inlet"]
+inlet_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['inlet']
+inlet_p = np.sum(inlet_p * inlet_area)
+print(f"Total pressure on inlet: {inlet_p}")
 
 # Get wall pressure
 # sv_area stores area vector, three component, taking norm to get scalar
 zone_names = ["wall"]
-sv_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['wall']
-sv_area = solution_variable_data.get_data(variable_name="SV_AREA", zone_names=zone_names, domain_name=domain_name)['wall']
-area_vector = sv_area.reshape(-1, 3)
-area_scalar = np.linalg.norm(area_vector, axis=-1)
+wall_area = solution_variable_data.get_data(variable_name="SV_AREA", zone_names=zone_names, domain_name=domain_name)['wall']
+wall_area = sv_area.reshape(-1, 3)
+wall_area = np.linalg.norm(wall_area, axis=-1)
+print(wall_area.shape)
 
-print(area_scalar.shape)
-print(sv_p.shape)
-print(sv_area.shape)
+zone_names = ["wall"]
+wall_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['wall']
+wall_p = np.sum(wall_p * area_scalar)
+print(f"Total pressure on wall: {wall_p}")
 
-total_pressure_force = np.sum(sv_p * area_scalar)
-print(f"Total pressure on wall: {total_pressure_force}")
 
 ###############################################################################
 # Validation
 # ~~~~~~~~~~
 #
 
-# Check mass flow rate
+# Check mass flow rate / conservation of mass
 print(color["R"] + "--------------- Check mass flow rate -------------------------" + color["RESET"])
 solver_report = solver_session.solution.report_definitions
 solver_report.flux["mass_flow_rate"] = {}
@@ -288,12 +331,18 @@ mass_flow_rate.boundaries = [
 mass_flow_rate.per_zone = True
 mass_flow_rate.print_state()
 solver_report.compute(report_defs=["mass_flow_rate"])
+mfr = solver_report.compute(report_defs=["mass_flow_rate"])
+
 
 # Check state and other choices
 mass_flow_rate.print_state()
 mass_flow_rate.report_type.allowed_values()
 mass_flow_rate.boundaries.allowed_values()
 mass_flow_rate.get_state()
+
+# Check conservation of momentum
+print(color["R"] + "--------------- Check conservation of momentum -------------------------" + color["RESET"])
+residual = w_outlet_m * mfr[0]['mass_flow_rate(inlet)'][0] - w_inlet_m * mfr[0]['mass_flow_rate(inlet)'][0]
 
 ########################################################################l#######
 # Result module: Configure graphics picture export
