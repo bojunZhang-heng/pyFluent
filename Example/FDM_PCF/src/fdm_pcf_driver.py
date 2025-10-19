@@ -15,10 +15,7 @@ from ansys.fluent.core.solver import VelocityInlet
 from colorama import Fore, Style
 from colorama import Fore, Style
 from datetime import datetime
-
-sys.path.append('./src')
-from utils import project_to_plane, plot_velocity_contour
-from other_utils import setup_logger, get_colors
+from utils import project_to_plane, plot_velocity_contour, get_colors
 
 color = get_colors()
 
@@ -67,9 +64,12 @@ solver_general.solver.time.allowed_values()
 # Select "sst k-omega" model
 #
 
-solver_model = solver_session.settings.setup.models.viscous
-solver_model.model = "k-omega"
-solver_model.k_omega_model = "sst"
+solver_model = solver_session.settings.setup.models
+
+solver_model.energy.enabled = True
+solver_model.viscous.model = "laminar"
+#solver_model.viscous.model = "k-omega"
+#solver_model.viscous.k_omega_model = "sst"
 
 ###############################################################################
 # Create material
@@ -94,7 +94,7 @@ solver_materials.fluid["air"].set_state(air_dict)
 #
 
 # Take the default
-#solver_session.setup.cell_zone_conditions.fluid["interior-part_1"].general.material = ("air")
+solver_session.setup.cell_zone_conditions.fluid["fluid___"].general.material = ("air")
 
 
 ###############################################################################
@@ -104,7 +104,7 @@ solver_materials.fluid["air"].set_state(air_dict)
 #
 #
 
-# inlet, Setting: Value
+# velocity inlet
 # Velocity Specification Method: Magnitude, Normal to Boundary
 # Velocity Magnitude: 1.5[m/s]
 # Turbulent module:
@@ -113,21 +113,23 @@ solver_materials.fluid["air"].set_state(air_dict)
 #    Turbulent Viscosity Rate [10]
 inlet = solver_session.settings.setup.boundary_conditions.velocity_inlet["inlet"]
 inlet.momentum.velocity_magnitude.value = 1.5
-inlet.turbulence.turbulence_specification = "Intensity and Viscosity Ratio"
-inlet.turbulence.turbulent_intensity = 0.05
-inlet.turbulence.turbulent_viscosity_ratio = 10
+inlet.momentum.initial_gauge_pressure = 0
+#inlet.turbulence.turbulence_specification = "Intensity and Viscosity Ratio"
+#inlet.turbulence.turbulent_intensity = 0.05
+#inlet.turbulence.turbulent_viscosity_ratio = 10
 
 
-# outlet, Setting: Value
+# pressure outlet
 # Turbulent module:
 #    Specification Method: Intensity and Viscosity Ratio
 #    Backflow Turbluent Intensity: 5 [%]
 #    Backflow Turbulent Viscosity Ratio: [10]
 
 outlet = solver_session.settings.setup.boundary_conditions.pressure_outlet["outlet"]
-outlet.turbulence.turbulence_specification = "Intensity and Viscosity Ratio"
-outlet.turbulence.turbulent_intensity = 0.05
-outlet.turbulence.turbulent_viscosity_ratio = 10
+outlet.momentum.gauge_pressure = 0
+#outlet.turbulence.turbulence_specification = "Intensity and Viscosity Ratio"
+#outlet.turbulence.turbulent_intensity = 0.05
+#outlet.turbulence.turbulent_viscosity_ratio = 10
 
 ###############################################################################
 # Solution module: Set Method for CFD analysis
@@ -150,8 +152,8 @@ residuals_options.equations["continuity"].monitor = True                # Enable
 residuals_options.equations["x-velocity"].absolute_criteria = 0.0001
 residuals_options.equations["y-velocity"].absolute_criteria = 0.0001
 residuals_options.equations["z-velocity"].absolute_criteria = 0.0001
-residuals_options.equations["k"].absolute_criteria = 0.0001
-residuals_options.equations["omega"].absolute_criteria = 0.0001
+#residuals_options.equations["k"].absolute_criteria = 0.0001
+#residuals_options.equations["omega"].absolute_criteria = 0.0001
 
 ###############################################################################
 # Solution module: Initialize flow field
@@ -303,13 +305,13 @@ print(f"Total pressure on inlet: {inlet_p}")
 # sv_area stores area vector, three component, taking norm to get scalar
 zone_names = ["wall"]
 wall_area = solution_variable_data.get_data(variable_name="SV_AREA", zone_names=zone_names, domain_name=domain_name)['wall']
-wall_area = sv_area.reshape(-1, 3)
+wall_area = wall_area.reshape(-1, 3)
 wall_area = np.linalg.norm(wall_area, axis=-1)
 print(wall_area.shape)
 
 zone_names = ["wall"]
 wall_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['wall']
-wall_p = np.sum(wall_p * area_scalar)
+wall_p = np.sum(wall_p * wall_area)
 print(f"Total pressure on wall: {wall_p}")
 
 
@@ -343,6 +345,11 @@ mass_flow_rate.get_state()
 # Check conservation of momentum
 print(color["R"] + "--------------- Check conservation of momentum -------------------------" + color["RESET"])
 residual = w_outlet_m * mfr[0]['mass_flow_rate(inlet)'][0] - w_inlet_m * mfr[0]['mass_flow_rate(inlet)'][0]
+print(f"residual: {residual}")
+force = wall_p + inlet_p + outlet_p
+print(wall_p, inlet_p, outlet_p)
+## BUG is here the force is vector! can not direct plus like scalar
+print(f"force: {force}")
 
 ########################################################################l#######
 # Result module: Configure graphics picture export
