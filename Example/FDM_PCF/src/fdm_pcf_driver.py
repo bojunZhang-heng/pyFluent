@@ -239,13 +239,13 @@ print(svu_info.name, svu_info.dimension, svu_info.field_type) # SV_U 1 <class 'n
 
 # Get Solution Variable Data 
 # The centroid data in SV is the same as field data
-zone_names = ["outlet"]                      
+zone_names = ["outlet"]
 vars_info = solution_variable_info.get_variables_info(zone_names=zone_names, domain_name=domain_name)
 print("Available SVAR names:", vars_info.solution_variables)  # e.g. ['SV_U', 'SV_V', 'SV_P', 'SV_W']
 solution_variable_data = solver_session.fields.solution_variable_data  
 
 # Outlet solution
-zone_names = ["outlet"]                      
+zone_names = ["outlet"]
 sv_u = solution_variable_data.get_data(variable_name="SV_U", zone_names=zone_names, domain_name=domain_name)['outlet'] 
 sv_v = solution_variable_data.get_data(variable_name="SV_V", zone_names=zone_names, domain_name=domain_name)['outlet']
 sv_w = solution_variable_data.get_data(variable_name="SV_W", zone_names=zone_names, domain_name=domain_name)['outlet']
@@ -259,17 +259,21 @@ print(w_outlet_m)
 zone_names = ["outlet"]
 outlet_area = solution_variable_data.get_data(variable_name="SV_AREA", zone_names=zone_names, domain_name=domain_name)['outlet']
 outlet_area = outlet_area.reshape(-1, 3)
-outlet_area = np.linalg.norm(outlet_area, axis=-1)
+print("outlet_area:")
 print(outlet_area.shape)
 
 zone_names = ["outlet"]
 outlet_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['outlet']
-outlet_p = np.sum(outlet_p * outlet_area)
-print(f"Total pressure on outlet: {outlet_p}")
+outlet_force = outlet_p[:, None] * outlet_area
+print("outlet_force:")
+print(outlet_force.shape)
+print(outlet_force[:10,:])
 
 
+zone_names = ["outlet"]
 outlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name)['outlet']
 outlet_position = np.reshape(outlet_position, (-1, 3))
+print("outlet_position:")
 print(outlet_position.shape)
 print(outlet_position[1][:])
 
@@ -287,32 +291,32 @@ print(w_inlet_m)
 zone_names = ["inlet"]
 inlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name)['inlet']
 inlet_position = np.reshape(inlet_position, (-1, 3))
+print("inlet_position:")
 print(inlet_position.shape)
 print(inlet_position[1][:])
 
 zone_names = ["inlet"]
 inlet_area = solution_variable_data.get_data(variable_name="SV_AREA", zone_names=zone_names, domain_name=domain_name)['inlet']
 inlet_area = inlet_area.reshape(-1, 3)
-inlet_area = np.linalg.norm(inlet_area, axis=-1)
-print(inlet_area.shape)
+print("inlet_area:")
+print(inlet_area[:10,:])
 
 zone_names = ["inlet"]
 inlet_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['inlet']
-inlet_p = np.sum(inlet_p * inlet_area)
-print(f"Total pressure on inlet: {inlet_p}")
+inlet_force = inlet_p[:, None] * inlet_area
+print("inlet_force:")
+print(inlet_force[:10, :])
 
 # Get wall pressure
-# sv_area stores area vector, three component, taking norm to get scalar
+# sv_area stores area vector, three component 
 zone_names = ["wall"]
 wall_area = solution_variable_data.get_data(variable_name="SV_AREA", zone_names=zone_names, domain_name=domain_name)['wall']
 wall_area = wall_area.reshape(-1, 3)
-wall_area = np.linalg.norm(wall_area, axis=-1)
-print(wall_area.shape)
 
 zone_names = ["wall"]
 wall_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['wall']
-wall_p = np.sum(wall_p * wall_area)
-print(f"Total pressure on wall: {wall_p}")
+wall_force = wall_p[:, None] * wall_area
+print(wall_force[:10,:])
 
 
 ###############################################################################
@@ -344,12 +348,17 @@ mass_flow_rate.get_state()
 
 # Check conservation of momentum
 print(color["R"] + "--------------- Check conservation of momentum -------------------------" + color["RESET"])
-residual = w_outlet_m * mfr[0]['mass_flow_rate(inlet)'][0] - w_inlet_m * mfr[0]['mass_flow_rate(inlet)'][0]
-print(f"residual: {residual}")
-force = wall_p + inlet_p + outlet_p
-print(wall_p, inlet_p, outlet_p)
-## BUG is here the force is vector! can not direct plus like scalar
-print(f"force: {force}")
+momentum_flux = w_outlet_m * mfr[0]['mass_flow_rate(outlet)'][0] + w_inlet_m * mfr[0]['mass_flow_rate(inlet)'][0]
+print(f"momentum_flux: {momentum_flux}")
+
+net_force = inlet_force.sum(axis=0) + outlet_force.sum(axis=0) + wall_force.sum(axis=0)
+print("net_force:")
+print(net_force.shape)
+print(net_force)
+
+momentum_residual = net_force.copy()
+momentum_residual[2] = momentum_residual[2] - momentum_flux
+print(f"momentum_residual: {momentum_residual}")
 
 ########################################################################l#######
 # Result module: Configure graphics picture export
