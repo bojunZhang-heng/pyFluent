@@ -31,7 +31,7 @@ solver_session = pyfluent.launch_fluent(
     mode="solver",
 )
 
-version_tag = "v1"
+version_tag = "v2"
 cwd = os.getcwd()
 print(solver_session.get_fluent_version())
 
@@ -61,15 +61,13 @@ solver_general.solver.time.allowed_values()
 ###############################################################################
 # Setup model for CFD analysis
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Select "sst k-omega" model
+# Select "laminar" model
 #
 
 solver_model = solver_session.settings.setup.models
 
 solver_model.energy.enabled = True
 solver_model.viscous.model = "laminar"
-#solver_model.viscous.model = "k-omega"
-#solver_model.viscous.k_omega_model = "sst"
 
 ###############################################################################
 # Create material
@@ -86,60 +84,17 @@ air_dict["viscosity"]["value"] = 1.7894e-05
 solver_materials.fluid["air"].set_state(air_dict)
 
 ###############################################################################
-# Set up cell zone conditions
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Set up the cell zone conditions for the fluid zone
-# i.e. Define the fluid zone material property
-# Set "material" to "air"
-#
-
-# Take the default
-solver_session.setup.cell_zone_conditions.fluid["fluid___"].general.material = ("air")
-
-
-###############################################################################
 # Set up boundary conditions for CFD analysis
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # for the "inlet", "outlet", "wall
 #
-#
 
-# velocity inlet
-# Velocity Specification Method: Magnitude, Normal to Boundary
-# Velocity Magnitude: 1.5[m/s]
-# Turbulent module:
-#    Specification Method: Intensity and Viscosity Ratio
-#    Turbulent Intensity: 5 [%]
-#    Turbulent Viscosity Rate [10]
 inlet = solver_session.settings.setup.boundary_conditions.velocity_inlet["inlet"]
 inlet.momentum.velocity_magnitude.value = 1.5
 inlet.momentum.initial_gauge_pressure = 0
-#inlet.turbulence.turbulence_specification = "Intensity and Viscosity Ratio"
-#inlet.turbulence.turbulent_intensity = 0.05
-#inlet.turbulence.turbulent_viscosity_ratio = 10
-
-
-# pressure outlet
-# Turbulent module:
-#    Specification Method: Intensity and Viscosity Ratio
-#    Backflow Turbluent Intensity: 5 [%]
-#    Backflow Turbulent Viscosity Ratio: [10]
 
 outlet = solver_session.settings.setup.boundary_conditions.pressure_outlet["outlet"]
 outlet.momentum.gauge_pressure = 0
-#outlet.turbulence.turbulence_specification = "Intensity and Viscosity Ratio"
-#outlet.turbulence.turbulent_intensity = 0.05
-#outlet.turbulence.turbulent_viscosity_ratio = 10
-
-###############################################################################
-# Solution module: Set Method for CFD analysis
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# BUG Maybe do not need set methods Explicitly in code
-# The system will take one automatically
-#
-
-#solver_methods = solver_session.settings.solution.methods()
-#solver_methods.flow_scheme = "SIMPLE"
 
 ###############################################################################
 # Check convergence criteria
@@ -152,8 +107,6 @@ residuals_options.equations["continuity"].monitor = True                # Enable
 residuals_options.equations["x-velocity"].absolute_criteria = 0.0001
 residuals_options.equations["y-velocity"].absolute_criteria = 0.0001
 residuals_options.equations["z-velocity"].absolute_criteria = 0.0001
-#residuals_options.equations["k"].absolute_criteria = 0.0001
-#residuals_options.equations["omega"].absolute_criteria = 0.0001
 
 ###############################################################################
 # Solution module: Initialize flow field
@@ -193,13 +146,13 @@ solver_session.settings.file.write(file_type="case-data", file_name=case_path)
 field_data = solver_session.fields.field_data
 
 face_data_request = SurfaceFieldDataRequest(
-        surfaces=["wall"],
+        surfaces=["wall-fluid_outlet"],
         data_types=[SurfaceDataType.FacesNormal,
                     SurfaceDataType.FacesCentroid,
                     SurfaceDataType.Vertices,
                    ]
         )
-all_data = field_data.get_field_data(face_data_request)["wall"]
+all_data = field_data.get_field_data(face_data_request)["wall-fluid_outlet"]
 
 # Get normal data
 normal_data = all_data.face_normals
@@ -229,136 +182,16 @@ print("Zones:", zones_info.zones)          # e.g. ['inlet','wall','outlet',...]
 domain_name = "mixture"                    # change to domains in your case
 zone_names = ["outlet"]                     # change to zones in your case 
 
-vars_info = solution_variable_info.get_variables_info(zone_names=zone_names, domain_name=domain_name)
-print("Available SVAR names:", vars_info.solution_variables)  # e.g. ['SV_U', 'SV_V', 'SV_P', 'SV_W']
-svu_info = vars_info['SV_U'] 
-svv_info = vars_info['SV_V'] 
-svw_info = vars_info['SV_W'] 
-svcentroid_info = vars_info['SV_CENTROID'] 
-print(svu_info.name, svu_info.dimension, svu_info.field_type) # SV_U 1 <class 'numpy.float64'> 
 
-# Get Solution Variable Data 
-# The centroid data in SV is the same as field data
-zone_names = ["outlet"]
-vars_info = solution_variable_info.get_variables_info(zone_names=zone_names, domain_name=domain_name)
-print("Available SVAR names:", vars_info.solution_variables)  # e.g. ['SV_U', 'SV_V', 'SV_P', 'SV_W']
-solution_variable_data = solver_session.fields.solution_variable_data  
 
 # Outlet solution
 zone_names = ["outlet"]
+solution_variable_data = solver_session.fields.solution_variable_data 
 sv_u = solution_variable_data.get_data(variable_name="SV_U", zone_names=zone_names, domain_name=domain_name)['outlet'] 
 sv_v = solution_variable_data.get_data(variable_name="SV_V", zone_names=zone_names, domain_name=domain_name)['outlet']
 sv_w = solution_variable_data.get_data(variable_name="SV_W", zone_names=zone_names, domain_name=domain_name)['outlet']
 outlet_vel = np.stack((sv_u, sv_v, sv_w), axis=1)
 outlet_vel_mag = np.linalg.norm(outlet_vel, axis=-1)
-w_outlet_m = np.mean(outlet_vel[:,2])
-
-print(outlet_vel.shape)
-print(w_outlet_m)
-
-zone_names = ["outlet"]
-outlet_area = solution_variable_data.get_data(variable_name="SV_AREA", zone_names=zone_names, domain_name=domain_name)['outlet']
-outlet_area = outlet_area.reshape(-1, 3)
-print("outlet_area:")
-print(outlet_area.shape)
-
-zone_names = ["outlet"]
-outlet_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['outlet']
-outlet_force = outlet_p[:, None] * outlet_area
-print("outlet_force:")
-print(outlet_force.shape)
-print(outlet_force[:10,:])
-
-
-zone_names = ["outlet"]
-outlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name)['outlet']
-outlet_position = np.reshape(outlet_position, (-1, 3))
-print("outlet_position:")
-print(outlet_position.shape)
-print(outlet_position[1][:])
-
-# Inlet solution
-zone_names = ["inlet"]
-sv_u = solution_variable_data.get_data(variable_name="SV_U", zone_names=zone_names, domain_name=domain_name)['inlet'] 
-sv_v = solution_variable_data.get_data(variable_name="SV_V", zone_names=zone_names, domain_name=domain_name)['inlet']
-sv_w = solution_variable_data.get_data(variable_name="SV_W", zone_names=zone_names, domain_name=domain_name)['inlet']
-inlet_vel = np.stack((sv_u, sv_v, sv_w), axis=1)
-inlet_vel_mag = np.linalg.norm(inlet_vel, axis=-1)
-
-w_inlet_m = np.mean(inlet_vel[:,2])
-print(w_inlet_m)
-
-zone_names = ["inlet"]
-inlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name)['inlet']
-inlet_position = np.reshape(inlet_position, (-1, 3))
-print("inlet_position:")
-print(inlet_position.shape)
-print(inlet_position[1][:])
-
-zone_names = ["inlet"]
-inlet_area = solution_variable_data.get_data(variable_name="SV_AREA", zone_names=zone_names, domain_name=domain_name)['inlet']
-inlet_area = inlet_area.reshape(-1, 3)
-print("inlet_area:")
-print(inlet_area[:10,:])
-
-zone_names = ["inlet"]
-inlet_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['inlet']
-inlet_force = inlet_p[:, None] * inlet_area
-print("inlet_force:")
-print(inlet_force[:10, :])
-
-# Get wall pressure
-# sv_area stores area vector, three component 
-zone_names = ["wall"]
-wall_area = solution_variable_data.get_data(variable_name="SV_AREA", zone_names=zone_names, domain_name=domain_name)['wall']
-wall_area = wall_area.reshape(-1, 3)
-
-zone_names = ["wall"]
-wall_p = solution_variable_data.get_data(variable_name="SV_P", zone_names=zone_names, domain_name=domain_name)['wall']
-wall_force = wall_p[:, None] * wall_area
-print(wall_force[:10,:])
-
-
-###############################################################################
-# Validation
-# ~~~~~~~~~~
-#
-
-# Check mass flow rate / conservation of mass
-print(color["R"] + "--------------- Check mass flow rate -------------------------" + color["RESET"])
-solver_report = solver_session.solution.report_definitions
-solver_report.flux["mass_flow_rate"] = {}
-
-mass_flow_rate = solver_report.flux["mass_flow_rate"] 
-mass_flow_rate.boundaries = [
-        "inlet",
-        "outlet",
-]
-mass_flow_rate.per_zone = True
-mass_flow_rate.print_state()
-solver_report.compute(report_defs=["mass_flow_rate"])
-mfr = solver_report.compute(report_defs=["mass_flow_rate"])
-
-
-# Check state and other choices
-mass_flow_rate.print_state()
-mass_flow_rate.report_type.allowed_values()
-mass_flow_rate.boundaries.allowed_values()
-mass_flow_rate.get_state()
-
-# Check conservation of momentum
-print(color["R"] + "--------------- Check conservation of momentum -------------------------" + color["RESET"])
-momentum_flux = w_outlet_m * mfr[0]['mass_flow_rate(outlet)'][0] + w_inlet_m * mfr[0]['mass_flow_rate(inlet)'][0]
-print(f"momentum_flux: {momentum_flux}")
-
-net_force = inlet_force.sum(axis=0) + outlet_force.sum(axis=0) + wall_force.sum(axis=0)
-print("net_force:")
-print(net_force.shape)
-print(net_force)
-
-momentum_residual = net_force.copy()
-momentum_residual[2] = momentum_residual[2] - momentum_flux
-print(f"momentum_residual: {momentum_residual}")
 
 ########################################################################l#######
 # Result module: Configure graphics picture export
@@ -402,15 +235,6 @@ velocity_outlet = solver_results.graphics.contour["velocity_outlet"]
 velocity_outlet.range_options = {
                     "auto_range": True
                 }
-
-#velocity_outlet.range_option.option = (
-#    "auto-range-off"
-#)
-#velocity_outlet.range_option.set_state(
-#    {
-#        "auto_range_off": {"maximum": 60, "minimum": 0, "clip_to_range": False},
-#    }
-#)
 
 velocity_outlet.print_state()
 velocity_outlet.display()
