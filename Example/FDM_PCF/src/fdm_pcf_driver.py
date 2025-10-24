@@ -123,7 +123,7 @@ solver_session.settings.solution.initialization.hybrid_initialize()
 # Solve for 150 iterations
 
 solver_solution = solver_session.settings.solution
-solver_solution.run_calculation.iterate(iter_count=100)
+solver_solution.run_calculation.iterate(iter_count=100_000)
 
 #######################################################################################
 # Save the case file
@@ -192,7 +192,13 @@ sv_v = solution_variable_data.get_data(variable_name="SV_V", zone_names=zone_nam
 sv_w = solution_variable_data.get_data(variable_name="SV_W", zone_names=zone_names, domain_name=domain_name)['outlet']
 outlet_vel = np.stack((sv_u, sv_v, sv_w), axis=1)
 outlet_vel_mag = np.linalg.norm(outlet_vel, axis=-1)
+outlet_vel_m = outlet_vel_mag.mean()
 
+zone_names = ["outlet"]
+outlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name)['outlet']
+outlet_position = np.reshape(outlet_position, (-1, 3))
+print("outlet_position:")
+print(outlet_position.shape)
 ########################################################################l#######
 # Result module: Configure graphics picture export
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -284,6 +290,7 @@ plt.show()
 plt.close(fig)
 
 
+print(f"outlet magnitude mean: {outlet_vel_m}")
 ###############################################################################
 # Close Fluent
 # ~~~~~~~~~~~~
