@@ -1,21 +1,22 @@
+"""
+    FDM_PCF wind  tunnel design
+    by BojunZhang
+"""
 ###############################################################################
 # Perform required imports
 # ~~~~~~~~~~~~~~~~~~~~~~~~
 # downloading, importing, geometry file
-
-
 import os
-import sys
-import numpy as np
-import matplotlib.pyplot as plt
-import ansys.fluent.core as pyfluent
-from ansys.fluent.core import SurfaceDataType, SurfaceFieldDataRequest
-from ansys.fluent.visualization import Contour, GraphicsWindow, PlaneSurface
-from ansys.fluent.core.solver import VelocityInlet
-from colorama import Fore, Style
-from colorama import Fore, Style
 from datetime import datetime
-from utils import project_to_plane, plot_velocity_contour, get_colors
+
+import ansys.fluent.core as pyfluent
+import matplotlib.pyplot as plt
+import numpy as np
+from ansys.fluent.core import SurfaceDataType, SurfaceFieldDataRequest
+from ansys.fluent.core.solver import VelocityInlet
+from ansys.fluent.visualization import Contour, GraphicsWindow, PlaneSurface
+from colorama import Fore, Style
+from utils import get_colors, plot_velocity_contour, project_to_plane
 
 color = get_colors()
 
@@ -31,7 +32,7 @@ solver_session = pyfluent.launch_fluent(
     mode="solver",
 )
 
-version_tag = "v2"
+version_tag = "v1"
 cwd = os.getcwd()
 print(solver_session.get_fluent_version())
 
@@ -61,13 +62,14 @@ solver_general.solver.time.allowed_values()
 ###############################################################################
 # Setup model for CFD analysis
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Select "laminar" model
+# Select "k-omega-sst" model
 #
 
 solver_model = solver_session.settings.setup.models
 
 solver_model.energy.enabled = True
-solver_model.viscous.model = "laminar"
+solver_model.viscous.model = "k-omega"
+solver_model.viscous.k_omega_model = "sst"
 
 ###############################################################################
 # Create material
@@ -75,7 +77,9 @@ solver_model.viscous.model = "laminar"
 # Create a material named "Air"
 #
 
-print(color["R"] + "--------------- Materials -------------------------" + color["RESET"])
+print(
+    color["R"] + "--------------- Materials -------------------------" + color["RESET"]
+)
 solver_materials = solver_session.settings.setup.materials
 solver_materials.database.copy_by_name(type="fluid", name="air")
 air_dict = solver_materials.fluid["air"].get_state()
@@ -89,12 +93,19 @@ solver_materials.fluid["air"].set_state(air_dict)
 # for the "inlet", "outlet", "wall
 #
 
+
 inlet = solver_session.settings.setup.boundary_conditions.velocity_inlet["inlet"]
 inlet.momentum.velocity_magnitude.value = 1.5
 inlet.momentum.initial_gauge_pressure = 0
+inlet.turbulence.turbulence_specification = "Intensity and Viscosity Ratio"
+inlet.turbulence.turbulent_intensity = 0.05
+inlet.turbulence.turbulent_viscosity_ratio = 10
 
 outlet = solver_session.settings.setup.boundary_conditions.pressure_outlet["outlet"]
 outlet.momentum.gauge_pressure = 0
+outlet.turbulence.turbulence_specification = "Intensity and Viscosity Ratio"
+outlet.turbulence.turbulent_intensity = 0.05
+outlet.turbulence.turbulent_viscosity_ratio = 10
 
 ###############################################################################
 # Check convergence criteria
@@ -103,7 +114,7 @@ outlet.momentum.gauge_pressure = 0
 
 residuals_options = solver_session.settings.solution.monitor.residual
 residuals_options.equations["continuity"].absolute_criteria = 0.0001
-residuals_options.equations["continuity"].monitor = True                # Enable continuity residuals
+residuals_options.equations["continuity"].monitor = True  # Enable continuity residuals
 residuals_options.equations["x-velocity"].absolute_criteria = 0.0001
 residuals_options.equations["y-velocity"].absolute_criteria = 0.0001
 residuals_options.equations["z-velocity"].absolute_criteria = 0.0001
@@ -114,7 +125,11 @@ residuals_options.equations["z-velocity"].absolute_criteria = 0.0001
 # Initialize the flow field using hybrid initialization.
 #
 
-print(color["R"] + "---------------Initialization module-------------------------" + color["RESET"])
+print(
+    color["R"]
+    + "---------------Initialization module-------------------------"
+    + color["RESET"]
+)
 solver_session.settings.solution.initialization.hybrid_initialize()
 
 ###############################################################################
@@ -123,7 +138,7 @@ solver_session.settings.solution.initialization.hybrid_initialize()
 # Solve for 150 iterations
 
 solver_solution = solver_session.settings.solution
-solver_solution.run_calculation.iterate(iter_count=100_000)
+solver_solution.run_calculation.iterate(iter_count=10_000)
 
 #######################################################################################
 # Save the case file
@@ -146,13 +161,14 @@ solver_session.settings.file.write(file_type="case-data", file_name=case_path)
 field_data = solver_session.fields.field_data
 
 face_data_request = SurfaceFieldDataRequest(
-        surfaces=["wall-fluid_outlet"],
-        data_types=[SurfaceDataType.FacesNormal,
-                    SurfaceDataType.FacesCentroid,
-                    SurfaceDataType.Vertices,
-                   ]
-        )
-all_data = field_data.get_field_data(face_data_request)["wall-fluid_outlet"]
+    surfaces=["outlet"],
+    data_types=[
+        SurfaceDataType.FacesNormal,
+        SurfaceDataType.FacesCentroid,
+        SurfaceDataType.Vertices,
+    ],
+)
+all_data = field_data.get_field_data(face_data_request)["outlet"]
 
 # Get normal data
 normal_data = all_data.face_normals
@@ -176,26 +192,33 @@ print(vertex_data.shape)
 
 # Get Solution Variable Info
 solution_variable_info = solver_session.fields.solution_variable_info
-zones_info = solution_variable_info.get_zones_info() 
-print("Domains:", zones_info.domains)      # e.g. ['mixture'] 
-print("Zones:", zones_info.zones)          # e.g. ['inlet','wall','outlet',...] 
-domain_name = "mixture"                    # change to domains in your case
-zone_names = ["outlet"]                     # change to zones in your case 
-
+zones_info = solution_variable_info.get_zones_info()
+print("Domains:", zones_info.domains)  # e.g. ['mixture']
+print("Zones:", zones_info.zones)  # e.g. ['inlet','wall','outlet',...]
+domain_name = "mixture"  # change to domains in your case
+zone_names = ["outlet"]  # change to zones in your case
 
 
 # Outlet solution
 zone_names = ["outlet"]
-solution_variable_data = solver_session.fields.solution_variable_data 
-sv_u = solution_variable_data.get_data(variable_name="SV_U", zone_names=zone_names, domain_name=domain_name)['outlet'] 
-sv_v = solution_variable_data.get_data(variable_name="SV_V", zone_names=zone_names, domain_name=domain_name)['outlet']
-sv_w = solution_variable_data.get_data(variable_name="SV_W", zone_names=zone_names, domain_name=domain_name)['outlet']
+solution_variable_data = solver_session.fields.solution_variable_data
+sv_u = solution_variable_data.get_data(
+    variable_name="SV_U", zone_names=zone_names, domain_name=domain_name
+)["outlet"]
+sv_v = solution_variable_data.get_data(
+    variable_name="SV_V", zone_names=zone_names, domain_name=domain_name
+)["outlet"]
+sv_w = solution_variable_data.get_data(
+    variable_name="SV_W", zone_names=zone_names, domain_name=domain_name
+)["outlet"]
 outlet_vel = np.stack((sv_u, sv_v, sv_w), axis=1)
 outlet_vel_mag = np.linalg.norm(outlet_vel, axis=-1)
 outlet_vel_m = outlet_vel_mag.mean()
 
 zone_names = ["outlet"]
-outlet_position = solution_variable_data.get_data(variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name)['outlet']
+outlet_position = solution_variable_data.get_data(
+    variable_name="SV_CENTROID", zone_names=zone_names, domain_name=domain_name
+)["outlet"]
 outlet_position = np.reshape(outlet_position, (-1, 3))
 print("outlet_position:")
 print(outlet_position.shape)
@@ -207,10 +230,8 @@ print(outlet_position.shape)
 # Create plane surface using normal point and centroid point
 # Do not know how to use
 outlet_plane = PlaneSurface.create_from_point_and_normal(
-        solver = solver_session,
-        point=centroid_mean,
-        normal=normal_unit
-        )
+    solver=solver_session, point=centroid_mean, normal=normal_unit
+)
 
 
 solver_results = solver_session.settings.results
@@ -233,14 +254,12 @@ solver_results = solver_session.results
 
 graphics = solver_results.graphics
 graphics.contour["velocity_outlet"] = {
-        "field": "velocity-magnitude",
-        "surfaces_list": ["outlet"],
-        "node_values": True,
-        }
+    "field": "velocity-magnitude",
+    "surfaces_list": ["outlet"],
+    "node_values": True,
+}
 velocity_outlet = solver_results.graphics.contour["velocity_outlet"]
-velocity_outlet.range_options = {
-                    "auto_range": True
-                }
+velocity_outlet.range_options = {"auto_range": True}
 
 velocity_outlet.print_state()
 velocity_outlet.display()
@@ -248,7 +267,9 @@ velocity_outlet.display()
 graphics.views.restore_view(view_name="front")
 graphics.views.auto_scale()
 figure_dir = os.path.join(cwd, "figure")
-figure_path = os.path.join(figure_dir, f"outlet_surf_velocity_magnitude_{version_tag}.png")
+figure_path = os.path.join(
+    figure_dir, f"outlet_surf_velocity_magnitude_{version_tag}.png"
+)
 graphics.picture.save_picture(file_name=figure_path)
 
 
@@ -261,36 +282,58 @@ graphics.picture.save_picture(file_name=figure_path)
 figure_dir = os.path.join(cwd, "figure")
 os.makedirs(figure_dir, exist_ok=True)
 figure_path = os.path.join(figure_dir, f"vel_mag_{version_tag}.png")
-coords2d, axis1, axis2, origin = project_to_plane(outlet_position, normal_unit, centroid_mean)
+coords2d, axis1, axis2, origin = project_to_plane(
+    outlet_position, normal_unit, centroid_mean
+)
 
 # save and load
-np.savetxt(os.path.join(data_dir, f"pts_{version_tag}.txt"), coords2d, fmt="%.6e", delimiter=" ")
-np.savetxt(os.path.join(data_dir, f"vel_mag_{version_tag}.txt"), outlet_vel_mag, fmt="%.6e")
+np.savetxt(
+    os.path.join(data_dir, f"pts_{version_tag}.txt"),
+    coords2d,
+    fmt="%.6e",
+    delimiter=" ",
+)
+np.savetxt(
+    os.path.join(data_dir, f"vel_mag_{version_tag}.txt"), outlet_vel_mag, fmt="%.6e"
+)
 
 pts = np.loadtxt(os.path.join(data_dir, f"pts_{version_tag}.txt"))
 vel_mag = np.loadtxt(os.path.join(data_dir, f"vel_mag_{version_tag}.txt"))
 
 
 # Easy mode
-#fig, ax = plot_velocity_contour(coords2d, outlet_vel_mag)
+# fig, ax = plot_velocity_contour(coords2d, outlet_vel_mag)
 
 # Hard mode
 np.multiply(coords2d, 1000, out=coords2d)
 fig, ax = plot_velocity_contour(
-        points=coords2d, vel=outlet_vel_mag, 
-        cmap="viridis", fill_nan_method="nearest",   
-        grid_res=200, smooth_sigma=0.5, 
-        figsize=(8,4), levels=50)
+    points=coords2d,
+    vel=outlet_vel_mag,
+    cmap="viridis",
+    fill_nan_method="nearest",
+    grid_res=200,
+    smooth_sigma=0.5,
+    figsize=(8, 4),
+    levels=50,
+)
 
 if os.path.exists(figure_path):
     os.remove(figure_path)
 
-fig.savefig(figure_path, dpi=300, bbox_inches='tight')
+fig.savefig(figure_path, dpi=300, bbox_inches="tight")
 plt.show()
 plt.close(fig)
 
+###############################################################################
+# Reduce the backflow
+# ~~~~~~~~~~~~~~~~~~~
+#
 
-print(f"outlet magnitude mean: {outlet_vel_m}")
+# Compute the standard deviation of the velocity at the outlet
+C_v = np.std(outlet_vel_mag) / np.mean(outlet_vel_mag) * 100
+print(f"Degree of velocity non-uniformity C_v: {C_v}%")
+
+
 ###############################################################################
 # Close Fluent
 # ~~~~~~~~~~~~
@@ -298,10 +341,3 @@ print(f"outlet magnitude mean: {outlet_vel_m}")
 #
 
 #solver_session.exit()
-
-
-
-
-
-
-
