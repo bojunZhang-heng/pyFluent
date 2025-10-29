@@ -1,0 +1,27 @@
+[flake8]
+# ----------------------------
+# 基本检查设置
+# ----------------------------
+max-line-length = 100          
+ignore = E203, W503, E266      
+exclude = .git,__pycache__,venv,build,dist   
+
+# ----------------------------
+# 插件相关设置
+# ----------------------------
+# flake8-bugbear: 提示潜在 bug（B开头的代码）
+# flake8-docstrings: 检查 docstring（D开头的代码）
+# flake8-import-order: 检查 import 顺序（I开头的代码）
+select = B,C,E,F,W,D,I
+
+# ----------------------------
+# Docstring 风格
+# ----------------------------
+docstring-convention = google   
+# 可选 google 或 numpy
+
+# ----------------------------
+# 复杂度检查
+# ----------------------------
+max-complexity = 10        
+# Cyclomatic Complexity 最大值
