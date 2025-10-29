@@ -18,6 +18,7 @@ def compute_Re(u, rho, L, mu):
     # mu  : N*s / m^2
 
     Re = rho * u * L / mu
+    print(f"Reynolds number: Re = {Re:.3e}")
 
     return Re
     
