@@ -28,7 +28,7 @@ color = get_colors()
 
 solver_session = pyfluent.launch_fluent(
     precision="double",
-    processor_count=2,
+    processor_count=4,
     mode="solver",
 )
 
@@ -55,9 +55,7 @@ solver_session.settings.mesh.check()
 #
 
 solver_general = solver_session.settings.setup.general
-solver_general.solver.time = "unsteady-2nd-order"
-solver_general.solver.time.print_state()
-solver_general.solver.time.allowed_values()
+solver_general.solver.time = "steady"
 
 
 ###############################################################################
@@ -133,6 +131,15 @@ print(
 )
 solver_session.settings.solution.initialization.hybrid_initialize()
 
+
+###############################################################################
+# Solution module: Set method
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+
+solver_solution = solver_session.settings.solution
+solver_solution.methods.p_v_coupling.flow_scheme='SIMPLE'
+
 #######################################################################################
 # File moudle 
 # ~~~~~~~~~~~
@@ -140,10 +147,8 @@ solver_session.settings.solution.initialization.hybrid_initialize()
 #
 
 solver_file = solver_session.settings.file
-solver_file.auto_save.data_frequency.set_state(5)
+solver_file.auto_save.data_frequency.set_state(100)
 solver_file.auto_save.case_frequency.set_state('if-case-is-modified')
-solver_file.auto_save.append_file_name_with.file_suffix_type.set_state('time-step')
-solver_file.auto_save.append_file_name_with.file_decimal_digit.set_state(6)
 solver_file.auto_save.retain_most_recent_files.set_state(True)
 solver_file.auto_save.max_files.set_state(1)
 
@@ -158,11 +163,7 @@ solver_file.auto_save.root_name.set_state(dat_path)
 # Solve for 150 iterations
 #
 
-solver_solution = solver_session.settings.solution
-solver_solution.run_calculation.transient_controls.time_step_size = 0.1
-# LOGIC error, twice for time step count
-solver_solution.run_calculation.dual_time_iterate(time_step_count=1000, max_iter_per_step=5)
-
+solver_solution.run_calculation.iterate(iter_count=5_000)
 case_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}_{mesh_tag}.cas.h5")
 solver_session.settings.file.write_case(file_name=case_path)
 solver_solution.run_calculation.calculate()
@@ -361,4 +362,4 @@ print(f"mean value: {np.mean(outlet_vel_mag)}")
 # Close Fluent.
 #
 
-solver_session.exit()
+#solver_session.exit()
