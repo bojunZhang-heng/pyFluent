@@ -32,7 +32,8 @@ solver_session = pyfluent.launch_fluent(
     mode="solver",
 )
 
-version_tag = "v1"
+version_tag = "v5"
+mesh_tag = "coarse"
 cwd = os.getcwd()
 print(solver_session.get_fluent_version())
 
@@ -43,7 +44,7 @@ print(solver_session.get_fluent_version())
 # save the current dir
 
 mesh_dir = os.path.join(cwd, "mesh")
-mesh_path = os.path.join(mesh_dir, f"FDM_PCF_{version_tag}.msh")
+mesh_path = os.path.join(mesh_dir, f"FDM_PCF_{version_tag}_{mesh_tag}.msh")
 solver_session.settings.file.read_case(file_name=mesh_path)
 solver_session.settings.mesh.check()
 
@@ -132,23 +133,42 @@ print(
 )
 solver_session.settings.solution.initialization.hybrid_initialize()
 
+#######################################################################################
+# File moudle 
+# ~~~~~~~~~~~
+# Auto save
+#
+
+solver_file = solver_session.settings.file
+solver_file.auto_save.data_frequency.set_state(5)
+solver_file.auto_save.case_frequency.set_state('if-case-is-modified')
+solver_file.auto_save.append_file_name_with.file_suffix_type.set_state('time-step')
+solver_file.auto_save.append_file_name_with.file_decimal_digit.set_state(6)
+solver_file.auto_save.retain_most_recent_files.set_state(True)
+solver_file.auto_save.max_files.set_state(1)
+
+data_dir = os.path.join(cwd, "data")
+os.makedirs(data_dir, exist_ok=True)
+dat_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}_{mesh_tag}")
+solver_file.auto_save.root_name.set_state(dat_path)
+
 ###############################################################################
 # Solution module: Set run Caculation
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Solve for 150 iterations
-
-solver_solution = solver_session.settings.solution
-solver_solution.run_calculation.iterate(iter_count=10_000)
-
-#######################################################################################
-# Save the case file
-# ~~~~~~~~~~~~~~~~~~
 #
 
-data_dir = os.path.join(cwd, "data")
-os.makedirs(data_dir, exist_ok=True)
-case_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}.cas.h5")
-solver_session.settings.file.write(file_type="case-data", file_name=case_path)
+solver_solution = solver_session.settings.solution
+solver_solution.run_calculation.transient_controls.time_step_size = 0.1
+# LOGIC error, twice for time step count
+solver_solution.run_calculation.dual_time_iterate(time_step_count=1000, max_iter_per_step=5)
+
+case_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}_{mesh_tag}.cas.h5")
+solver_session.settings.file.write_case(file_name=case_path)
+solver_solution.run_calculation.calculate()
+
+dat_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}_{mesh_tag}.dat.h5")
+solver_session.settings.file.write_data(file_name=dat_path)
 
 ###############################################################################
 # Field_data Module
@@ -268,7 +288,7 @@ graphics.views.restore_view(view_name="front")
 graphics.views.auto_scale()
 figure_dir = os.path.join(cwd, "figure")
 figure_path = os.path.join(
-    figure_dir, f"outlet_surf_velocity_magnitude_{version_tag}.png"
+    figure_dir, f"outlet_surf_velocity_magnitude_{version_tag}_{mesh_tag}.png"
 )
 graphics.picture.save_picture(file_name=figure_path)
 
@@ -281,24 +301,24 @@ graphics.picture.save_picture(file_name=figure_path)
 
 figure_dir = os.path.join(cwd, "figure")
 os.makedirs(figure_dir, exist_ok=True)
-figure_path = os.path.join(figure_dir, f"vel_mag_{version_tag}.png")
+figure_path = os.path.join(figure_dir, f"vel_mag_{version_tag}_{mesh_tag}.png")
 coords2d, axis1, axis2, origin = project_to_plane(
     outlet_position, normal_unit, centroid_mean
 )
 
 # save and load
 np.savetxt(
-    os.path.join(data_dir, f"pts_{version_tag}.txt"),
+    os.path.join(data_dir, f"pts_{version_tag}_{mesh_tag}.txt"),
     coords2d,
     fmt="%.6e",
     delimiter=" ",
 )
 np.savetxt(
-    os.path.join(data_dir, f"vel_mag_{version_tag}.txt"), outlet_vel_mag, fmt="%.6e"
+    os.path.join(data_dir, f"vel_mag_{version_tag}_{mesh_tag}.txt"), outlet_vel_mag, fmt="%.6e"
 )
 
-pts = np.loadtxt(os.path.join(data_dir, f"pts_{version_tag}.txt"))
-vel_mag = np.loadtxt(os.path.join(data_dir, f"vel_mag_{version_tag}.txt"))
+pts = np.loadtxt(os.path.join(data_dir, f"pts_{version_tag}_{mesh_tag}.txt"))
+vel_mag = np.loadtxt(os.path.join(data_dir, f"vel_mag_{version_tag}_{mesh_tag}.txt"))
 
 
 # Easy mode
@@ -332,6 +352,7 @@ plt.close(fig)
 # Compute the standard deviation of the velocity at the outlet
 C_v = np.std(outlet_vel_mag) / np.mean(outlet_vel_mag) * 100
 print(f"Degree of velocity non-uniformity C_v: {C_v}%")
+print(f"mean value: {np.mean(outlet_vel_mag)}")
 
 
 ###############################################################################
@@ -340,4 +361,4 @@ print(f"Degree of velocity non-uniformity C_v: {C_v}%")
 # Close Fluent.
 #
 
-#solver_session.exit()
+solver_session.exit()
