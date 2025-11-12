@@ -36,13 +36,14 @@ cwd = os.getcwd()
 # save the current dir
 #
 
-version_tag = "v2"
+version_tag = "v5"
+mesh_tag = "fine4"
 solver_file = solver_session.settings.file
 
 data_dir = os.path.join(cwd, "data")
 os.makedirs(data_dir, exist_ok=True)
-case_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}.cas.h5")
-data_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}.dat.h5")
+case_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}_{mesh_tag}.cas.h5")
+data_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}_{mesh_tag}.dat.h5")
 solver_file.read_case(file_name=case_path)
 solver_file.read_data(file_name=data_path)
 
@@ -176,7 +177,7 @@ graphics.picture.save_picture(file_name=figure_path)
 # Draw a outlet velocity profile by plt
 #
 
-figure_dir = os.path.join(cwd, "figure")
+figure_dir = os.path.join(cwd, "tmp")
 os.makedirs(figure_dir, exist_ok=True)
 figure_path = os.path.join(figure_dir, f"vel_mag_{version_tag}.png")
 coords2d, axis1, axis2, origin = project_to_plane(
@@ -212,6 +213,8 @@ fig, ax = plot_velocity_contour(
     smooth_sigma=0.5,
     figsize=(8, 4),
     levels=50,
+    cbar_fontsize=12,
+    cbar_tick_fontsize=11,
 )
 
 if os.path.exists(figure_path):
@@ -235,4 +238,4 @@ print(f"Degree of velocity non-uniformity C_v: {C_v}%")
 # Close Fluent.
 #
 
-#solver_session.exit()
+solver_session.exit()
