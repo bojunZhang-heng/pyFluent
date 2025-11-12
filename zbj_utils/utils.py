@@ -48,6 +48,8 @@ def plot_velocity_contour(
     levels=50,
     fill_nan_method="nearest",  # method to fill NaN from cubic interpolation
     figsize=(8,4),
+    cbar_fontsize=8,           # color bar字体大小参数
+    cbar_tick_fontsize=7,       # color bar刻度字体大小参数
 ):
     """
     Draw a velocity contour from scattered points.
@@ -62,6 +64,7 @@ def plot_velocity_contour(
     if pts.ndim != 2 or pts.shape[0] != vel.shape[0]:
         raise ValueError("points must be (N,2) or (N,3) and vel length must match N")
 
+    pts = pts[:, [1, 0]]
     pts_x = pts[:, 0]
     pts_y = pts[:, 1]
 
@@ -86,9 +89,11 @@ def plot_velocity_contour(
     # prepare figure
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
     cf = ax.contourf(X, Y, V, levels=levels, cmap=cmap)
+
+    # 改进的color bar设置
     cbar = fig.colorbar(cf, ax=ax, fraction=0.05, pad=0.02, aspect=30)
-    cbar.set_label("Velocity magnitude (m/s)", fontsize=8)  
-    cbar.ax.tick_params(labelsize=7)                # 刻度字体大小
+    cbar.set_label("Velocity magnitude (m/s)", fontsize=cbar_fontsize)
+    cbar.ax.tick_params(labelsize=cbar_tick_fontsize)
 
 
     # axes labels and aspect
