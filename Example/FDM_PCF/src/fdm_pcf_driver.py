@@ -27,13 +27,13 @@ color = get_colors()
 # Redirect all fluent mesg into a specified file
 
 solver_session = pyfluent.launch_fluent(
-    precision="double",
+    precision="single",
     processor_count=4,
     mode="solver",
 )
 
 version_tag = "v5"
-mesh_tag = "coarse"
+mesh_tag = "fine4"
 cwd = os.getcwd()
 print(solver_session.get_fluent_version())
 
@@ -163,7 +163,7 @@ solver_file.auto_save.root_name.set_state(dat_path)
 # Solve for 150 iterations
 #
 
-solver_solution.run_calculation.iterate(iter_count=5_000)
+solver_solution.run_calculation.iterate(iter_count=5000)
 case_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}_{mesh_tag}.cas.h5")
 solver_session.settings.file.write_case(file_name=case_path)
 solver_solution.run_calculation.calculate()
@@ -351,9 +351,19 @@ plt.close(fig)
 #
 
 # Compute the standard deviation of the velocity at the outlet
+sigma_v = np.std(outlet_vel_mag)
 C_v = np.std(outlet_vel_mag) / np.mean(outlet_vel_mag) * 100
+print(f"Standard deviation sigma_v: {sigma_v}%")
 print(f"Degree of velocity non-uniformity C_v: {C_v}%")
 print(f"mean value: {np.mean(outlet_vel_mag)}")
+
+
+result_path = os.path.join(data_dir, f"FDM_PCF_{version_tag}_{mesh_tag}.txt")
+
+with open(result_path, "w", encoding="utf-8") as f:
+    f.write(f"Standard deviation sigma_v: {sigma_v}%\n")
+    f.write(f"Degree of velocity non‑uniformity C_v: {C_v}%\n")
+    f.write(f"Mean value: {np.mean(outlet_vel_mag)}\n")
 
 
 ###############################################################################
@@ -362,4 +372,4 @@ print(f"mean value: {np.mean(outlet_vel_mag)}")
 # Close Fluent.
 #
 
-#solver_session.exit()
+solver_session.exit()
