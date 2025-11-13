@@ -293,6 +293,26 @@ figure_path = os.path.join(
 )
 graphics.picture.save_picture(file_name=figure_path)
 
+###############################################################################
+# Reduce the backflow
+# ~~~~~~~~~~~~~~~~~~~
+#
+
+# Compute the standard deviation of the velocity at the outlet
+sigma_v = np.std(outlet_vel_mag)
+C_v = np.std(outlet_vel_mag) / np.mean(outlet_vel_mag) * 100
+print(f"Standard deviation sigma_v: {sigma_v}%")
+print(f"Degree of velocity non-uniformity C_v: {C_v}%")
+print(f"mean value: {np.mean(outlet_vel_mag)}")
+
+
+result_path = os.path.join(data_dir, f"FDM_PCF_{version_tag}_{mesh_tag}.txt")
+
+with open(result_path, "w", encoding="utf-8") as f:
+    f.write(f"Standard deviation sigma_v: {sigma_v}%\n")
+    f.write(f"Degree of velocity non‑uniformity C_v: {C_v}%\n")
+    f.write(f"Mean value: {np.mean(outlet_vel_mag)}\n")
+
 
 ###############################################################################
 # Post-Processing Workflow
@@ -344,27 +364,6 @@ if os.path.exists(figure_path):
 fig.savefig(figure_path, dpi=300, bbox_inches="tight")
 plt.show()
 plt.close(fig)
-
-###############################################################################
-# Reduce the backflow
-# ~~~~~~~~~~~~~~~~~~~
-#
-
-# Compute the standard deviation of the velocity at the outlet
-sigma_v = np.std(outlet_vel_mag)
-C_v = np.std(outlet_vel_mag) / np.mean(outlet_vel_mag) * 100
-print(f"Standard deviation sigma_v: {sigma_v}%")
-print(f"Degree of velocity non-uniformity C_v: {C_v}%")
-print(f"mean value: {np.mean(outlet_vel_mag)}")
-
-
-result_path = os.path.join(data_dir, f"FDM_PCF_{version_tag}_{mesh_tag}.txt")
-
-with open(result_path, "w", encoding="utf-8") as f:
-    f.write(f"Standard deviation sigma_v: {sigma_v}%\n")
-    f.write(f"Degree of velocity non‑uniformity C_v: {C_v}%\n")
-    f.write(f"Mean value: {np.mean(outlet_vel_mag)}\n")
-
 
 ###############################################################################
 # Close Fluent
