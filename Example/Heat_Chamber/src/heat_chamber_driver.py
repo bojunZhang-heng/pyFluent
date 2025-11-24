@@ -1,5 +1,5 @@
 """
-    FDM_PCF wind  tunnel design
+    Heat Chamber heat transfer
     by BojunZhang
 """
 ###############################################################################
@@ -16,9 +16,6 @@ from ansys.fluent.core import SurfaceDataType, SurfaceFieldDataRequest
 from ansys.fluent.core.solver import VelocityInlet
 from ansys.fluent.visualization import Contour, GraphicsWindow, PlaneSurface
 from colorama import Fore, Style
-from utils import get_colors, plot_velocity_contour, project_to_plane
-
-color = get_colors()
 
 ###############################################################################
 # Launch Fluent
@@ -28,12 +25,12 @@ color = get_colors()
 
 solver_session = pyfluent.launch_fluent(
     precision="single",
-    processor_count=4,
+    processor_count=14,
     mode="solver",
 )
 
-version_tag = "v1"
-mesh_tag = "fine"
+version_tag = "v3"
+mesh_tag = "coarse"
 cwd = os.getcwd()
 print(solver_session.get_fluent_version())
 
@@ -126,24 +123,31 @@ print("-"*20 + "Materials setting Done" + "-"*20)
 #
 
 solver_cell_zone_conditions = solver_session.setup.cell_zone_conditions
-fluid_zone = solver_cell_zone_conditions.fluid['heat_chamber_v1-heat_chamber_fluid___']
+fluid_zone = solver_cell_zone_conditions.fluid['heat_chamber_v2-heat_chamber_fluid___']
 fluid_zone.general.material = "air"
 
-solid_zone_ABS = solver_cell_zone_conditions.solid["heat_chamber_v1-heat_chamber_solid_abs"]
+solid_zone_ABS = solver_cell_zone_conditions.solid["heat_chamber_v2-heat_chamber_solid_abs"]
 solid_zone_ABS.general.material = "al"
-solid_zone_nozzle = solver_cell_zone_conditions.solid["heat_chamber_v1-heat_chamber_solid_nozzle"]
+solid_zone_nozzle = solver_cell_zone_conditions.solid["heat_chamber_v2-heat_chamber_solid_nozzle"]
 solid_zone_nozzle.general.material = "brass"
 solid_zone_nozzle.fixed_values.enable = True
 nozzle_T = 260.0 + 273.15
 solid_zone_nozzle.fixed_values.variables["Temperature"].option = "value"
 solid_zone_nozzle.fixed_values.variables["Temperature"].value = nozzle_T
 
-solid_zone_heat_bed = solver_cell_zone_conditions.solid["heat_chamber_v1-heat_chamber_solid_heat_bed"]
+solid_zone_heat_bed = solver_cell_zone_conditions.solid["heat_chamber_v2-heat_chamber_solid_heat_bed"]
 solid_zone_heat_bed.general.material = "brass"
 solid_zone_heat_bed.fixed_values.enable = True
 heat_bed_T = 110.0 + 273.15
 solid_zone_heat_bed.fixed_values.variables["Temperature"].option = "value"
 solid_zone_heat_bed.fixed_values.variables["Temperature"].value = heat_bed_T
+
+# Split heat_bed and ABS interface into two solids
+solver_session.tui.mesh.modify_zones.slit_interior_between_diff_solids(
+    'yes',
+    'al',
+    'brass'
+)
 print("-"*20 + "Cell Zones Conditions setting Done" + "-"*20)
 
 
@@ -166,6 +170,14 @@ inlet.turbulence.turbulent_viscosity_ratio = 10
 inlet.thermal.temperature.option = 'value'
 inlet.thermal.temperature.value = 90 + 273.15
 
+outlet = solver_session.settings.setup.boundary_conditions.pressure_outlet["outlet"]
+outlet.momentum.gauge_pressure = 0
+outlet.turbulence.turbulence_specification = "Intensity and Viscosity Ratio"
+outlet.turbulence.turbulent_intensity = 0.05
+outlet.turbulence.turbulent_viscosity_ratio = 10
+outlet.thermal.backflow_total_temperature.option = 'value'
+outlet.thermal.backflow_total_temperature.value = 90 + 273.15
+
 wall_outer = solver_session.settings.setup.boundary_conditions.wall["wall_outer"]
 wall_outer.thermal.thermal_condition = "Heat Flux"
 wall_outer.thermal.heat_flux.option = "value"
@@ -174,7 +186,7 @@ wall_outer.thermal.heat_flux.value = 0
 wall_bcs = solver_session.settings.setup.boundary_conditions.wall
 wall_names = wall_bcs.get_object_names()
 excluded_wall = "wall_outer"
-for wall_name in all_wall_names:
+for wall_name in wall_names:
     if wall_name != excluded_wall:
         wall = wall_bcs[wall_name]
         wall.thermal.thermal_condition = "Coupled"
@@ -192,11 +204,11 @@ print("-"*20 + "Boudary Conditions setting Done" + "-"*20)
 #
 
 residuals_options = solver_session.settings.solution.monitor.residual
-residuals_options.equations["continuity"].absolute_criteria = 0.0001
-residuals_options.equations["continuity"].monitor = True  # Enable continuity residuals
-residuals_options.equations["x-velocity"].absolute_criteria = 0.0001
-residuals_options.equations["y-velocity"].absolute_criteria = 0.0001
-residuals_options.equations["z-velocity"].absolute_criteria = 0.0001
+residuals_options.equations["continuity"].absolute_criteria = 1e-4
+residuals_options.equations["x-velocity"].absolute_criteria = 1e-4
+residuals_options.equations["y-velocity"].absolute_criteria = 1e-4
+residuals_options.equations["z-velocity"].absolute_criteria = 1e-4
+residuals_options.equations["energy"].absolute_criteria = 1e-05
 
 ###############################################################################
 # Solution module: Initialize flow field
@@ -217,6 +229,8 @@ print("-"*20 + "Solution.Initialization setting Done" + "-"*20)
 solver_solution = solver_session.settings.solution
 solver_solution.methods.p_v_coupling.flow_scheme='SIMPLE'
 
+print("-"*20 + "Solution.methods SIMPLE setting Done" + "-"*20)
+
 #######################################################################################
 # File moudle 
 # ~~~~~~~~~~~
@@ -231,7 +245,7 @@ solver_file.auto_save.max_files.set_state(1)
 
 data_dir = os.path.join(cwd, "data")
 os.makedirs(data_dir, exist_ok=True)
-dat_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}_{mesh_tag}")
+dat_path = os.path.join(data_dir, f"HeatChamber_{version_tag}_{mesh_tag}")
 solver_file.auto_save.root_name.set_state(dat_path)
 
 ###############################################################################
@@ -241,13 +255,14 @@ solver_file.auto_save.root_name.set_state(dat_path)
 #
 
 solver_solution.run_calculation.iterate(iter_count=5000)
-case_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}_{mesh_tag}.cas.h5")
+case_path = os.path.join(data_dir, f"HeatChamber_{version_tag}_{mesh_tag}.cas.h5")
 solver_session.settings.file.write_case(file_name=case_path)
 solver_solution.run_calculation.calculate()
 
-dat_path = os.path.join(data_dir, f"FDM-PCF_{version_tag}_{mesh_tag}.dat.h5")
+dat_path = os.path.join(data_dir, f"HeatChamber_{version_tag}_{mesh_tag}.dat.h5")
 solver_session.settings.file.write_data(file_name=dat_path)
 
+print("-"*20 + "Solution Done" + "-"*20)
 ###############################################################################
 # Field_data Module
 # ~~~~~~~~~~~~~~~~~
