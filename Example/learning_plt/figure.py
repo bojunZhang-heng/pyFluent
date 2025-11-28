@@ -1,40 +1,6 @@
 import matplotlib.pyplot as plt
-###############################################################################
-# prepare figure
-# ~~~~~~~~~~~~~~
-#
 
-plt.rcParams['font.family'] = 'Times New Roman'
-# 全局设置，后续可覆盖
-
-fig, ax = plt.subplots(figsize=figsize)
-cf = ax.contourf(X, Y, V, levels=levels, cmap=cmap)
-cbar = fig.colorbar(cf, ax=ax, fraction=0.05, pad=0.02, aspect=30)
-cbar.set_label("Velocity magnitude (m/s)", fontsize=8)
-cbar.ax.tick_params(labelsize=7)                
-# plt.subplots: 创建 figure 与 axes，大小由 figsize 决定。  
-# ax.contourf: 用 X,Y,V 画填色等值线图（colormap 由 cmap，等值面数量由 levels 控制）。
-#   返回的 cf 是 QuadContourSet
-#   fraction=0.05：colorbar 比较窄（约占主轴高度的 5% 用于 colorbar 区域）。
-#   pad=0.02：主图与 colorbar 间隔较小。
-#   aspect=30：使色条更细长（调整视觉）。
-# tich_params 刻度字体大小
-
- 
-ax.set_xlabel("X (m)", fontsize=9)
-ax.set_title("Velocity contour", fontsize=10)
-ax.tick_params(axis='both', labelsize=8)
-ax.set_aspect('equal', adjustable='box')
-# set_aspect('equal') 确保 X、Y 单位长度相同（避免图被拉伸）
-# adjustable='box' 允许调整绘图区大小以保持比例。
-
-
-
-
-
-###############################################################################
-# colormap
-# ~~~~~~~~
+#----------------------- colormap -----------------------
 # "viridis"（默认，蓝→绿→黄）  
 #
 
@@ -42,4 +8,101 @@ cmp = ["viridis", "jet",  "cividis"]
 
 
 
+#----------------------- clamp -----------------------
+# clamp
+# ~~~~~
+# clamp,将取值限定在(-2, 2)
+# target[:,0] : 仅考虑第二维中的第一个分量
+#   (N,4)  -> (N,1)
+#
+
+targets["volume_anchor_velocity"].cpu()[:, 0].clamp(-2, 2)
+
+###############################################################################
+#----------------------- fig setting -----------------------
+#
+
+fig = []
+fig = plt.figure(figsize=figsize)
+
+# i = 0 1 2 使用三位数子图编号法（1 3 k）构建 1 行 3 列的
+fig.add_subplot(130 + i + 1, projection="3d")
+
+###############################################################################
+#----------------------- axs -----------------------
+# 准备收集每个子图的 axis 对象
+#
+
+axs = []
+ax = fig.add_subplot(130 + i + 1, projection="3d")
+axs.append(ax)：把 axis 存起来以便 later 使用（比如 colorbar）。
+
+# 设置标g（title）字体
+ax.title.set_fontsize(9)
+ax.title.set_fontname("Times New Roman")
+
+# 设置坐标轴名字（X/Y/Z label）字体
+ax.xaxis.label.set_fontsize(9)
+ax.xaxis.label.set_fontname("Times New Roman")
+
+ax.yaxis.label.set_fontsize(9)
+ax.yaxis.label.set_fontname("Times New Roman")
+
+ax.zaxis.label.set_fontsize(9)
+ax.zaxis.label.set_fontname("Times New Roman")
+
+# 设置坐标轴刻度标签（tick labels）字体
+for tick in ax.get_xticklabels():
+    tick.set_fontsize(9)
+    tick.set_fontname("Times New Roman")
+
+for tick in ax.get_yticklabels():
+    tick.set_fontsize(9)
+    tick.set_fontname("Times New Roman")
+
+for tick in ax.get_zticklabels():
+    tick.set_fontsize(9)
+    tick.set_fontname("Times New Roman")
+
+# 如果你还想让 tick 更稀疏（刻度别太密）
+ax.xaxis.set_major_locator(plt.MaxNLocator(4))
+ax.yaxis.set_major_locator(plt.MaxNLocator(4))
+ax.zaxis.set_major_locator(plt.MaxNLocator(4))
+
+# 如果你想让刻度线变细、变优雅
+ax.tick_params(width=0.5, pad=2)
+
+# Set box aspect based one actual data
+data_x_range = x.max() - x.min()
+data_y_range = y.max() - y.min()
+data_z_range = z.max() - z.min()
+axs[i].set_box_aspect((float(data_x_range), float(data_y_range), float(data_z_range)))
+
+#----------------------- unbind -----------------------
+#unbind(-1)：把最后一维“拆开”为多个 tensor
+#
+
+pos[i].shape == (N, 3)
+x, y, z = pos[i][perm].unbind(-1)]
+x = [x1, x2, ..., xN]
+y = [y1, y2, ..., yN]
+z = [z1, z2, ..., zN]
+
+#----------------------- scatter -----------------------
+# 散点图绘制
+# x, y, z 表示三个方向的数据信息
+# s=3 表示点的大小
+# c=delta[perm] 表示color的取值范围, 颜色区间
+# alpha=alpha 表示透明度
+#
+
+scatters = []
+scatter = ax.scatter(
+    x, y, z, s=3,
+    c=delta[perm] if is_delta else color[i][perm],
+    cmap="coolwarm",
+    vmin=None if is_delta else vmin,
+    vmax=None if is_delta else vmax,
+    alpha=alpha,
+)
 
