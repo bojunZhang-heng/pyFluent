@@ -11,7 +11,6 @@ from ansys.fluent.core import SurfaceDataType, SurfaceFieldDataRequest
 from ansys.fluent.visualization import Contour, GraphicsWindow, PlaneSurface
 from ansys.fluent.core.solver import VelocityInlet
 from colorama import Fore, Style
-from utils import project_to_plane, plot_velocity_contour
 
 
 ###############################################################################

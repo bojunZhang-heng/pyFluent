@@ -25,7 +25,7 @@ from colorama import Fore, Style
 
 solver_session = pyfluent.launch_fluent(
     precision="single",
-    processor_count=14,
+    processor_count=4,
     mode="solver",
 )
 
